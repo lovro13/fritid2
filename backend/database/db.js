@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 
 let pool;
 
-const envPath = process.env.ENV_PATH;
+const envPath = "../" + process.env.ENV_PATH;
 dotenv.config({ path: envPath });
 logger.info(`Loading environment from: ${envPath}`);
 

@@ -4,7 +4,8 @@ const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
-const { createInvoiceForOrder } = require('../minimax/service');
+const { createInvoiceForOrder } = require('../minimax/minimaxService');
+const logger = require('../logger');
 
 const router = express.Router();
 
@@ -65,13 +66,14 @@ router.post('/', async (req, res) => {
         const {
             userId, cartItems, shippingInfo
         } = req.body;
-
+        logger.info("Received", userId, cartItems, shippingInfo)
         // Validate cart items and calculate total
         let totalAmount = 0;
         const orderItemsData = [];
 
         for (const item of cartItems) {
             const product = await Product.findById(item.productId);
+            logger.info("Found product", product)
             if (!product) {
                 return res.status(400).json({ error: `Product ${item.productId} not found` });
             }
@@ -90,7 +92,7 @@ router.post('/', async (req, res) => {
                 price: product.price
             });
         }
-
+        logger.info("got all cartItems", cartItems)
         // Create order
         const order = await Order.create({
             userId: userId || null, // Allow guest orders
@@ -98,7 +100,7 @@ router.post('/', async (req, res) => {
             status: Order.STATUS.PENDING,
             ...shippingInfo
         });
-
+        logger.info("Created order", order)
         // Create order items
         const orderItems = await Promise.all(
             orderItemsData.map(item => 
@@ -110,28 +112,30 @@ router.post('/', async (req, res) => {
                 })
             )
         );
-
         // Update product stock
         await Promise.all(
             cartItems.map(item => 
                 Product.updateStock(item.productId, item.quantity)
             )
         );
-
+        
         // Load the complete order with items
         await order.loadOrderItems();
-
+        logger.info("Loaded order items")
+        
         // Optionally auto-create Minimax invoice after order creation
         if ((process.env.MINIMAX_INVOICE_ON_CREATE || '').toLowerCase() === 'true') {
+            logger.info("Creating minimax invoice")
             try {
                 // Use Authorization header if present, otherwise env creds
                 const auth = req.headers['authorization'] || req.headers['Authorization'];
                 const bearer = auth && /^Bearer\s+(.+)$/i.test(auth) ? auth.split(/\s+/)[1] : null;
                 const invoiceResult = await createInvoiceForOrder({ orderId: order.id, bearerToken: bearer });
                 res.status(201).json({ order, invoice: invoiceResult.invoice });
+                logger.info("Created minimax invoice for order: ", order)
                 return;
             } catch (invErr) {
-                console.error('Failed to create Minimax invoice:', invErr);
+                logger.error('Failed to create Minimax invoice:', invErr);
                 // Still return order; surface invoice error separately
                 res.status(201).json({ order, invoiceError: invErr.message });
                 return;

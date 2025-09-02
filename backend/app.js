@@ -29,10 +29,9 @@ const PORT = process.env.PORT;
 
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
-// IMPORTANT: Set FRONTEND_URL in your .env file for production
 const allowedOrigins = isProduction 
-  ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []) // e.g., 'https://your-frontend-app.com'
-  : ['http://localhost:4200', 'http://127.0.0.1:4200']; // Angular dev server
+  ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
+  : ['http://localhost:4200', 'http://127.0.0.1:4200']; 
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -54,7 +53,7 @@ const corsOptions = {
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-// app.use(cors(corsOptions)); // TEMPORARILY DISABLED
+app.use(cors(corsOptions)); // TEMPORARILY DISABLED
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

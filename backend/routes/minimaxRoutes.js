@@ -154,34 +154,33 @@ router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
     logger.info('Invoice created successfully:', invoiceResponse);
 
     // Optionally issue and generate PDF if configured
-    if (process.env.MINIMAX_INVOICE_ON_CREATE === 'true') {
+    if (process.env.MINIMAX_AUTO_ISSUE_PDF === 'true') {
       try {
         const issuedInvoiceId = invoiceResponse.IssuedInvoiceId;
         const rowVersion = invoiceResponse.RowVersion;
         
-        const pdfResponse = await apiRequestToMinimax({
-          method: 'PUT',
-          path: `orgs/${orgId}/issuedinvoices/${issuedInvoiceId}/actions/IssueAndGeneratePdf`,
-          token,
-          body: {},
-          query: { rowVersion }
-        });
+        if (issuedInvoiceId && rowVersion) {
+          const pdfResponse = await apiRequestToMinimax({
+            method: 'PUT',
+            path: `orgs/${orgId}/issuedinvoices/${issuedInvoiceId}/actions/IssueAndGeneratePdf`,
+            token,
+            body: {},
+            query: { rowVersion }
+          });
 
-        logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
-        
-        return res.status(201).json({
-          success: true,
-          invoice: invoiceResponse,
-          pdf: pdfResponse.Data
-        });
+          logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
+          
+          return res.status(201).json({
+            success: true,
+            invoice: invoiceResponse,
+            pdf: pdfResponse.Data
+          });
+        } else {
+          logger.warn('Missing IssuedInvoiceId or RowVersion for PDF generation');
+        }
       } catch (pdfError) {
         logger.error('Failed to generate PDF:', pdfError);
-        // Return invoice without PDF
-        return res.status(201).json({
-          success: true,
-          invoice: invoiceResponse,
-          pdfError: pdfError.message
-        });
+        // Return invoice without PDF - don't fail the whole operation
       }
     }
 
