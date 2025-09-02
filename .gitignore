@@ -82,3 +82,5 @@ backend/minimax_api_controller.http
 .env.local
 .env.prod
 **/.env
+
+/frontend/dist/
