@@ -1,0 +1,84 @@
+# See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+
+backend/logs
+backend/logs/
+# Node
+frontend/node_modules
+backend/node_modules
+frontend/.angular/
+npm-debug.log
+yarn-error.log
+frontend/.angular
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# Miscellaneous
+/.angular/cache
+.sass-cache/
+/connect.lock
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Database related files
+*.dump
+*.sql.bak
+/backend/src/main/resources/application.properties
+/backend/src/main/resources/application-local.properties
+
+# PostgreSQL backups
+backup_*.sql
+webstore_backup.*
+
+# Maven target directory
+/backend/target/
+info_minimax_api.txt
+/backend/.env.local
+
+
+# Environment variables - keep secrets out of git
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+.env.staging
+**/.env
+**/.env.local
+**/.env.*
+
+/backend/.env
+venv/
+backend/minimax_api_controller.http
+.env
+.env.local
+.env.prod
+**/.env
