@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
-const { getToken, apiRequestToMinimax: apiRequest } = require('./client');
+const { getToken, apiRequestToMinimax } = require('./client');
+const logger = require('../logger')
 
 function cfg(name, def = undefined) {
   const v = process.env[name];
@@ -85,16 +86,40 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
     if (!u || !p) throw new Error('Provide Bearer token or set MINIMAX_USERNAME and MINIMAX_PASSWORD');
     const t = await getToken({ username: u, password: p });
     token = t.access_token;
+    logger.info("Created new token")
   }
-
-  const result = await apiRequest({
-    method: 'POST',
-    path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
-    token,
-    body,
-  });
-
-  return { orderId: order.id, invoice: result };
+  
+  logger.info("Sending request to minimax to make invoice with body", body)
+  
+  try {
+    const result = await apiRequestToMinimax({
+      method: 'POST',
+      path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
+      token,
+      body,
+    });
+    logger.info("Successfully made invoice in minimax")
+    return { orderId: order.id, invoice: result };
+  } catch (error) {
+    // If token is invalid and we used bearerToken, try with fresh env token
+    if (error?.response?.status === 401 && bearerToken) {
+      logger.info("Bearer token invalid, trying with fresh env token");
+      const u = cfg('MINIMAX_USERNAME');
+      const p = cfg('MINIMAX_PASSWORD');
+      if (u && p) {
+        const t = await getToken({ username: u, password: p });
+        const result = await apiRequestToMinimax({
+          method: 'POST',
+          path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
+          token: t.access_token,
+          body,
+        });
+        logger.info("Successfully made invoice in minimax with fresh token")
+        return { orderId: order.id, invoice: result };
+      }
+    }
+    throw error;
+  }
 }
 
 module.exports = {

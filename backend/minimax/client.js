@@ -69,7 +69,6 @@ async function getToken({ username, password }) {
     'Content-Length': Buffer.byteLength(form.toString()),
   };
   logger.info('Token request headers:', headers);
-  logger.info('Token request body:', form.toString());
   
   try {
     const res = await httpsRequest('POST', url, headers, form.toString());

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
+const axios = require('axios');
+const logger = require('../logger');
 
 // POST /api/checkout
 router.post('/', async (req, res) => {
@@ -79,7 +81,54 @@ router.post('/', async (req, res) => {
 
         await Promise.all(orderItemsPromises);
 
-        res.status(201).json({ success: true, message: 'Checkout successful', orderId: order.id });
+        // Always create the invoice after order creation using our own backend endpoint
+        logger.info("Creating minimax invoice")
+        try {
+            // Use Authorization header if present, otherwise get fresh token
+            const auth = req.headers['authorization'] || req.headers['Authorization'];
+            let bearer = auth && /^Bearer\s+(.+)$/i.test(auth) ? /^Bearer\s+(.+)$/i.exec(auth)[1] : null;
+            
+            // If no bearer token, get one from our backend
+            if (!bearer) {
+                const axios = require('axios');
+                const baseUrl = `http://localhost:${process.env.PORT || 8080}`;
+                const tokenResponse = await axios.post(`${baseUrl}/api/minimax/token`, {});
+                bearer = tokenResponse.data.access_token;
+            }
+            
+            // Call our own backend endpoint to create invoice
+            const baseUrl = `http://localhost:${process.env.PORT || 8080}`;
+            const orgId = process.env.MINIMAX_ORG_ID || '195730';
+            
+            const invoiceResponse = await axios.post(
+                `${baseUrl}/api/minimax/orgs/${orgId}/issuedinvoices`,
+                { orderId: order.id },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${bearer}`
+                    }
+                }
+            );
+            
+            logger.info("Created minimax invoice for order: ", order.id)
+            return res.status(201).json({ 
+                success: true, 
+                message: 'Checkout successful', 
+                orderId: order.id, 
+                invoice: invoiceResponse.data 
+            });
+        } catch (invErr) {
+            logger.error('Failed to create Minimax invoice:', invErr);
+            // Don't crash checkout - still return success with error info
+            return res.status(201).json({ 
+                success: true, 
+                message: 'Checkout successful', 
+                orderId: order.id, 
+                invoiceError: 'Invoice creation failed but order was created successfully',
+                invoiceDetails: invErr.response?.data || invErr.message 
+            });
+        }
 
     } catch (error) {
         console.error('Checkout error:', error);
