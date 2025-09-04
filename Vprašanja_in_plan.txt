@@ -1,3 +1,4 @@
 Plan:
 -- gls api
--- diagrams
+-- colors of products
+-- fix the plaćnik of minimax, and maybe the products

@@ -2,15 +2,15 @@ import { inject } from '@angular/core';
 import { HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { AuthService } from '../service/auth.service';
 import { Router } from '@angular/router';
+import { TokenService } from '../service/token.service';
 
 export function authInterceptor(request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
-  const authService = inject(AuthService);
   const router = inject(Router);
+  const tokenService = inject(TokenService);
   
-  // Get the token from the auth service
-  const token = authService.getToken();
+  // Get the token from the token service
+  const token = tokenService.getToken();
   
   // Clone the request and add authorization header if token exists
   if (token) {
@@ -24,9 +24,9 @@ export function authInterceptor(request: HttpRequest<unknown>, next: HttpHandler
   // Handle the request and catch any authentication errors
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
-      // If we get a 401 Unauthorized error, logout the user
+      // If we get a 401 Unauthorized error, clear tokens and redirect
       if (error.status === 401) {
-        authService.logout();
+        tokenService.clearAll();
         router.navigate(['/auth']);
       }
       return throwError(() => error);

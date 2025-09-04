@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
+import { TokenService } from './token.service';
 
 export interface User {
   id: number;
@@ -24,37 +25,83 @@ export interface User {
 export class AuthService {
   private userSubject = new BehaviorSubject<User | null>(null);
   private tokenSubject = new BehaviorSubject<string | null>(null);
+  private isInitialized = new BehaviorSubject<boolean>(false);
   public user$ = this.userSubject.asObservable();
   public token$ = this.tokenSubject.asObservable();
+  public isInitialized$ = this.isInitialized.asObservable();
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private tokenService: TokenService) {
+    this.initializeAuth();
+    
+    // Listen for storage changes (e.g., when interceptor clears localStorage)
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'token' || event.key === 'user') {
+        this.handleStorageChange();
+      }
+    });
+  }
+
+  private handleStorageChange(): void {
+    const storedUser = this.tokenService.getUser();
+    const storedToken = this.tokenService.getToken();
+    
+    // If token or user was removed, clear the service state
+    if (!storedUser || !storedToken) {
+      this.userSubject.next(null);
+      this.tokenSubject.next(null);
+    }
+  }
+
+  private initializeAuth(): void {
     // Check if user is already logged in from localStorage
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
+    const storedUser = this.tokenService.getUser();
+    const storedToken = this.tokenService.getToken();
+    
     if (storedUser && storedToken) {
-      // Validate token before setting it
-      this.validateToken(storedToken).subscribe({
-        next: (isValid: boolean) => {
-          if (isValid) {
-            this.userSubject.next(JSON.parse(storedUser));
-            this.tokenSubject.next(storedToken);
-          } else {
-            this.logout();
-          }
-        },
-        error: () => {
+      try {
+        // First, check if token is expired client-side
+        if (this.tokenService.isTokenExpired(storedToken)) {
           this.logout();
+          this.isInitialized.next(true);
+          return;
         }
-      });
+
+        // Set the user and token immediately to prevent logout on reload
+        this.userSubject.next(storedUser);
+        this.tokenSubject.next(storedToken);
+        
+        // Then validate with server in background
+        this.validateToken(storedToken).subscribe({
+          next: (isValid: boolean) => {
+            if (!isValid) {
+              this.logout();
+            }
+            this.isInitialized.next(true);
+          },
+          error: () => {
+            this.logout();
+            this.isInitialized.next(true);
+          }
+        });
+      } catch (error) {
+        this.logout();
+        this.isInitialized.next(true);
+      }
+    } else {
+      this.isInitialized.next(true);
     }
   }
 
   getToken(): string | null {
-    return this.tokenSubject.getValue();
+    return this.tokenService.getToken();
   }
 
   isLoggedIn(): boolean {
     return !!this.getToken();
+  }
+
+  isReady(): boolean {
+    return this.isInitialized.getValue();
   }
 
   getCurrentUser(): User | null {
@@ -62,21 +109,18 @@ export class AuthService {
   }
 
   validateToken(token: string): Observable<boolean> {
+    if (!token || this.tokenService.isTokenExpired(token)) {
+      return of(false);
+    }
+    
     return this.http.post<{ valid: boolean }>(`${environment.apiBase}/auth/verify`, { token })
       .pipe(
         map((response: { valid: boolean }) => response.valid),
-        catchError(() => of(false))
+        catchError((error) => {
+          console.error('Token validation failed:', error);
+          return of(false);
+        })
       );
-  }
-
-  private isTokenExpired(token: string): boolean {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      return payload.exp < currentTime;
-    } catch {
-      return true;
-    }
   }
 
   login(email: string, password: string): Observable<{ success: boolean; message: string; user?: any, token?: string }> {
@@ -95,8 +139,8 @@ export class AuthService {
             name: `${res.user.firstName} ${res.user.lastName}`,
             role: res.user.role
           };
-          localStorage.setItem('user', JSON.stringify(user));
-          localStorage.setItem('token', res.token);
+          this.tokenService.setUser(user);
+          this.tokenService.setToken(res.token);
           this.userSubject.next(user);
           this.tokenSubject.next(res.token);
         }
@@ -127,8 +171,7 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    this.tokenService.clearAll();
     this.userSubject.next(null);
     this.tokenSubject.next(null);
   }

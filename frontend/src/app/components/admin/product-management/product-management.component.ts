@@ -26,7 +26,6 @@ export class ProductManagementComponent implements OnInit {
   isUploading = false;
 
   constructor() {
-    console.log('ProductManagementComponent initialized');
     this.productForm = this.fb.group({
       name: ['', Validators.required],
       description: [''],
@@ -37,16 +36,13 @@ export class ProductManagementComponent implements OnInit {
       stock_quantity: [0, Validators.min(0)],
       is_active: [true]
     });
-    console.log('Product form created with initial values');
   }
 
   ngOnInit(): void {
-    console.log('ProductManagementComponent ngOnInit');
     this.loadProducts();
   }
 
   loadProducts(): void {
-    console.log('Loading products from API');
     this.products$ = this.adminService.getProducts();
     // Subscribe temporarily to log the received products
     const subscription = this.products$.subscribe({
@@ -86,7 +82,6 @@ export class ProductManagementComponent implements OnInit {
       stock_quantity: product.stock_quantity || 0,
       is_active: product.is_active !== undefined ? product.is_active : true
     });
-    console.log('Product data loaded into form');
 
     // Scroll to the form for better UX
     document.querySelector('.product-form')?.scrollIntoView({ 
@@ -98,14 +93,11 @@ export class ProductManagementComponent implements OnInit {
   onDelete(id: number): void {
     console.log(`Attempting to delete product with ID=${id}`);
     if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-      console.log(`User confirmed deletion of product ID=${id}`);
       this.adminService.deleteProduct(id).subscribe({
         next: () => {
-          console.log(`Product ID=${id} deleted successfully`);
           this.loadProducts();
           // If we're editing the deleted product, reset the form
           if (this.currentProductId === id) {
-            console.log('Resetting form after deleting current product');
             this.resetForm();
           }
         },
@@ -120,12 +112,10 @@ export class ProductManagementComponent implements OnInit {
   }
 
   onImageSelected(event: Event): void {
-    console.log('Image selection event triggered');
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
     
     if (file) {
-      console.log(`Image selected: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
       
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -159,12 +149,10 @@ export class ProductManagementComponent implements OnInit {
   }
 
   private async uploadImage(file: File): Promise<string> {
-    console.log(`Uploading image: ${file.name}, size: ${file.size} bytes`);
     const formData = new FormData();
     formData.append('file', file);
 
     this.isUploading = true;
-    console.log('Starting image upload to server');
     
     try {
       const response = await fetch(`${environment.apiBase}/images/upload`, {
@@ -184,14 +172,12 @@ export class ProductManagementComponent implements OnInit {
         throw new Error(data.message || 'Upload failed');
       }
       
-      console.log('Image uploaded successfully, URL:', data.imageUrl);
       return data.imageUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
       throw error;
     } finally {
       this.isUploading = false;
-      console.log('Image upload process completed');
     }
   }
 
@@ -199,7 +185,6 @@ export class ProductManagementComponent implements OnInit {
     console.log('Form submitted, validating...');
     if (this.productForm.invalid) {
       console.warn('Form validation failed:', this.productForm.errors);
-      // Mark all fields as touched to show validation errors
       Object.keys(this.productForm.controls).forEach(key => {
         const control = this.productForm.get(key);
         control?.markAsTouched();
@@ -218,7 +203,6 @@ export class ProductManagementComponent implements OnInit {
     }
 
     const productData = this.productForm.value;
-    console.log('Processing form data:', productData);
     
     // Convert comma-separated colors string to array
     if (productData.colors && typeof productData.colors === 'string') {
@@ -234,17 +218,13 @@ export class ProductManagementComponent implements OnInit {
     try {
       // Upload image if a new one was selected
       if (this.selectedImageFile) {
-        console.log('Uploading new image file');
         const uploadedImageUrl = await this.uploadImage(this.selectedImageFile);
         productData.image_url = uploadedImageUrl;
-        console.log('Updated image URL in product data:', uploadedImageUrl);
       }
 
       if (this.isEditing && this.currentProductId) {
-        console.log(`Updating existing product ID=${this.currentProductId}`);
         this.adminService.updateProduct(this.currentProductId, productData).subscribe({
           next: (updatedProduct) => {
-            console.log('Product updated successfully:', updatedProduct);
             this.resetForm();
             this.loadProducts();
           },
@@ -254,10 +234,8 @@ export class ProductManagementComponent implements OnInit {
           }
         });
       } else {
-        console.log('Creating new product');
         this.adminService.createProduct(productData). subscribe({
           next: (newProduct) => {
-            console.log('Product created successfully:', newProduct);
             this.resetForm();
             this.loadProducts();
           },
@@ -274,7 +252,6 @@ export class ProductManagementComponent implements OnInit {
   }
 
   resetForm(): void {
-    console.log('Resetting product form');
     this.isEditing = false;
     this.currentProductId = null;
     this.selectedImageFile = null;
@@ -289,7 +266,6 @@ export class ProductManagementComponent implements OnInit {
       stock_quantity: 0,
       is_active: true
     });
-    console.log('Form reset complete');
   }
 
   // Helper method to check if a field has errors and is touched
@@ -341,27 +317,12 @@ export class ProductManagementComponent implements OnInit {
     // If it starts with /images/, prepend the backend URL
     if (imageUrl.startsWith('/images/')) {
       const fullUrl = `${environment.apiBase}${imageUrl}`;
-      console.log(`Converted relative path to full URL: ${fullUrl}`);
       return fullUrl;
     }
     
     // Otherwise, assume it's a relative path and construct the full URL
     const fullUrl = `${environment.apiBase}/images/${imageUrl}`;
-    console.log(`Constructed full image URL: ${fullUrl}`);
     return fullUrl;
   }
 
-  isFormReadyForSubmit(): boolean {
-    const basicFormValid = this.productForm.get('name')?.valid && 
-                          this.productForm.get('price')?.valid;
-    
-    // For new products, we need either a selected image or an existing image_url
-    const hasImageForNewProduct = this.isEditing || this.selectedImageFile || 
-                                 (this.productForm.get('image_url')?.value && 
-                                  this.productForm.get('image_url')?.value !== 'WILL_BE_UPLOADED');
-    
-    const isReady = !!basicFormValid && hasImageForNewProduct;
-    console.log(`Form ready for submit: ${isReady} (valid: ${!!basicFormValid}, has image: ${hasImageForNewProduct})`);
-    return isReady;
-  }
 }
