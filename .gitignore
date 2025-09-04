@@ -84,3 +84,5 @@ backend/minimax_api_controller.http
 **/.env
 
 /frontend/dist/
+
+diagram.drawio

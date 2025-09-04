@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { tap, map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export interface User {
@@ -32,8 +32,20 @@ export class AuthService {
     const storedUser = localStorage.getItem('user');
     const storedToken = localStorage.getItem('token');
     if (storedUser && storedToken) {
-      this.userSubject.next(JSON.parse(storedUser));
-      this.tokenSubject.next(storedToken);
+      // Validate token before setting it
+      this.validateToken(storedToken).subscribe({
+        next: (isValid: boolean) => {
+          if (isValid) {
+            this.userSubject.next(JSON.parse(storedUser));
+            this.tokenSubject.next(storedToken);
+          } else {
+            this.logout();
+          }
+        },
+        error: () => {
+          this.logout();
+        }
+      });
     }
   }
 
@@ -49,10 +61,28 @@ export class AuthService {
     return this.userSubject.value;
   }
 
+  validateToken(token: string): Observable<boolean> {
+    return this.http.post<{ valid: boolean }>(`${environment.apiBase}/auth/verify`, { token })
+      .pipe(
+        map((response: { valid: boolean }) => response.valid),
+        catchError(() => of(false))
+      );
+  }
+
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
+    } catch {
+      return true;
+    }
+  }
+
   login(email: string, password: string): Observable<{ success: boolean; message: string; user?: any, token?: string }> {
     // Send login request to backend
     return this.http.post<{ success: boolean; message: string; user?: any, token?: string }>(
-      `${environment.apiBase}/account/login`,
+      `${environment.apiBase}/auth/login`,
       { email, password }
     ).pipe(
       tap(res => {
@@ -85,7 +115,7 @@ export class AuthService {
     };
     console.log('Registration request:', registrationRequest);
     
-    return this.http.post(`${environment.apiBase}/account/register`, registrationRequest);
+    return this.http.post(`${environment.apiBase}/auth/register`, registrationRequest);
   }
 
   getUserById(id: number): Observable<User> {
