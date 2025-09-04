@@ -64,7 +64,7 @@ app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'u
 initializeDatabase();
 
 // Routes
-app.use('/api/account', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);

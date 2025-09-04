@@ -4,13 +4,6 @@ const { getPool } = require('../database/db');
 const logger = require('../logger');
 const router = express.Router();
 
-function bearerFrom(req) {
-  const h = req.headers['authorization'] || req.headers['Authorization'];
-  if (!h) return null;
-  const m = /^Bearer\s+(.+)$/i.exec(h);
-  return m ? m[1] : null;
-}
-
 // POST /api/minimax/token
 router.post('/token', async (req, res) => {
   logger.info("/token calles")
@@ -29,11 +22,11 @@ router.post('/token', async (req, res) => {
 // POST /api/minimax/orgs/:orgId/issuedinvoices - Create invoice for order
 router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
   try {
-    let token = bearerFrom(req);
     const orgId = req.params.orgId || process.env.MINIMAX_ORG_ID;
     
-    // Get token if not provided
-    if (!token && process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
+    // Always get a fresh Minimax token (ignore any JWT token from frontend)
+    let token = null;
+    if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
       const t = await getToken({ 
         username: process.env.MINIMAX_USERNAME, 
         password: process.env.MINIMAX_PASSWORD 
@@ -41,7 +34,7 @@ router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
       token = t.access_token;
     }
     
-    if (!token) return res.status(401).json({ error: 'Missing Bearer token' });
+    if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
 
     // Debug logging
     logger.info('Request body:', req.body);
@@ -202,13 +195,13 @@ router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
 // GET /api/minimax/orgs (current user orgs)
 router.get('/orgs', async (req, res) => {
   try {
-    let token = bearerFrom(req);
-    // Optionally obtain a token using env creds if none provided
-    if (!token && process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
+    // Always get a fresh Minimax token (ignore any JWT token from frontend)
+    let token = null;
+    if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
       const t = await getToken({ username: process.env.MINIMAX_USERNAME, password: process.env.MINIMAX_PASSWORD });
       token = t.access_token;
     }
-    if (!token) return res.status(401).json({ error: 'Missing Bearer token' });
+    if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
     const data = await apiRequestToMinimax({ method: 'GET', path: 'currentuser/orgs', token, query: req.query });
     res.json(data);
   } catch (err) {
@@ -220,8 +213,13 @@ router.get('/orgs', async (req, res) => {
 // Generic passthrough for GET under /orgs/:orgId/*
 router.get('/orgs/:orgId/*', async (req, res) => {
   try {
-    const token = bearerFrom(req);
-    if (!token) return res.status(401).json({ error: 'Missing Bearer token' });
+    // Always get a fresh Minimax token (ignore any JWT token from frontend)
+    let token = null;
+    if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
+      const t = await getToken({ username: process.env.MINIMAX_USERNAME, password: process.env.MINIMAX_PASSWORD });
+      token = t.access_token;
+    }
+    if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
     // Build path after '/orgs/:orgId/'
     const rest = req.params[0] || '';
     const path = `orgs/${encodeURIComponent(req.params.orgId)}/${rest}`;
@@ -236,8 +234,13 @@ router.get('/orgs/:orgId/*', async (req, res) => {
 // Generic passthrough for POST under /orgs/:orgId/*
 router.post('/orgs/:orgId/*', async (req, res) => {
   try {
-    const token = bearerFrom(req);
-    if (!token) return res.status(401).json({ error: 'Missing Bearer token' });
+    // Always get a fresh Minimax token (ignore any JWT token from frontend)
+    let token = null;
+    if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
+      const t = await getToken({ username: process.env.MINIMAX_USERNAME, password: process.env.MINIMAX_PASSWORD });
+      token = t.access_token;
+    }
+    if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
     const rest = req.params[0] || '';
     const path = `orgs/${encodeURIComponent(req.params.orgId)}/${rest}`;
     const data = await apiRequestToMinimax({ method: 'POST', path, token, body: req.body, query: req.query });
@@ -251,8 +254,13 @@ router.post('/orgs/:orgId/*', async (req, res) => {
 // Optionally support PUT for actions like issue postings
 router.put('/orgs/:orgId/*', async (req, res) => {
   try {
-    const token = bearerFrom(req);
-    if (!token) return res.status(401).json({ error: 'Missing Bearer token' });
+    // Always get a fresh Minimax token (ignore any JWT token from frontend)
+    let token = null;
+    if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
+      const t = await getToken({ username: process.env.MINIMAX_USERNAME, password: process.env.MINIMAX_PASSWORD });
+      token = t.access_token;
+    }
+    if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
     const rest = req.params[0] || '';
     const path = `orgs/${encodeURIComponent(req.params.orgId)}/${rest}`;
     const data = await apiRequestToMinimax({ method: 'PUT', path, token, body: req.body, query: req.query });
