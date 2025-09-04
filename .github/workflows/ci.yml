@@ -51,8 +51,27 @@ jobs:
           mysql -h 127.0.0.1 -u fritid_user -pfritid_password fritid_db -e "SHOW TABLES;"
         working-directory: ./backend
         
-      - name: Check backend build
-        run: npm run start --if-present || node app.js --version || echo "Backend setup complete"
+      - name: Check backend startup
+        run: |
+          # Start the server in background
+          npm start &
+          SERVER_PID=$!
+          echo "Started server with PID: $SERVER_PID"
+          
+          # Wait 20 seconds
+          echo "Waiting 20 seconds to check if server starts without errors..."
+          sleep 20
+          
+          # Check if process is still running (no crash)
+          if kill -0 $SERVER_PID 2>/dev/null; then
+            echo "✅ Server is running successfully after 20 seconds!"
+            # Kill the server
+            kill $SERVER_PID
+            echo "Server stopped"
+          else
+            echo "❌ Server crashed or failed to start"
+            exit 1
+          fi
         working-directory: ./backend
         env:
           NODE_ENV: test
