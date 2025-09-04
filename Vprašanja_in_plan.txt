@@ -1,2 +1,3 @@
 Plan:
--- naredi da lahko admin dodaja stvari
+-- gls api
+-- diagrams
