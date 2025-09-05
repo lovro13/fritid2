@@ -73,7 +73,7 @@ initializeDatabase();
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/checkout', checkoutRoutes);
+// app.use('/api/checkout', checkoutRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);

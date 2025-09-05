@@ -22,7 +22,7 @@ router.post('/token', async (req, res) => {
 // POST /api/minimax/orgs/:orgId/issuedinvoices - Create invoice for order
 router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
   try {
-    const orgId = req.params.orgId || process.env.MINIMAX_ORG_ID;
+    const orgId = process.env.MINIMAX_ORG_ID;
     
     // Always get a fresh Minimax token (ignore any JWT token from frontend)
     let token = null;

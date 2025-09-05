@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
 const { createInvoiceForOrder } = require('../services/minimaxService');
 const logger = require('../logger');
+const axios = require('axios');
 
 const router = express.Router();
 
@@ -100,17 +101,13 @@ router.post('/', async (req, res) => {
         
         // First, let's see what products exist in the database
         const allProducts = await Product.findAll();
-        console.log('Available products in database:');
-        allProducts.forEach(p => {
-            console.log(`- Product ID: ${p.id}, Name: ${p.name}`);
-        });
         
         // Then validate each cart item
         for (const item of cartItems) {
             console.log(`Checking if product ID ${item.product.id} exists...`);
             const product = await Product.findById(item.product.id);
             if (!product) {
-                console.log(`❌ Product with ID ${item.product.id} not found in database`);
+                console.log(`Product with ID ${item.product.id} not found in database`);
                 console.log('Available product IDs:', allProducts.map(p => p.id));
                 throw new Error(`Product with ID ${item.product.id} not found in database`);
             }

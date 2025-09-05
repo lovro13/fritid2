@@ -99,7 +99,7 @@ export class PaymentMethodComponent implements OnInit {
             userId: currentUser?.id || null  // Include userId if logged in
           };
           console.log('Checkout payload:', payload);
-          this.http.post( `${environment.apiBase}/checkout`, payload).subscribe({
+          this.http.post( `${environment.apiBase}/order`, payload).subscribe({
             next: (response) => {
               console.log('Checkout success', response);
               this.router.navigate(['/thank-you']);
@@ -131,8 +131,8 @@ export class PaymentMethodComponent implements OnInit {
         };
         
         console.log('Checkout payload:', payload);
-        console.log('sending to backend: ', `${environment.apiBase}/checkout`)
-        this.http.post(`${environment.apiBase}/checkout`, payload).subscribe({
+        console.log('sending to backend: ', `${environment.apiBase}/orders`)
+        this.http.post(`${environment.apiBase}/orders`, payload).subscribe({
           next: (response) => {
             console.log('Checkout success', response);
             this.router.navigate(['/thank-you']);
