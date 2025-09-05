@@ -68,7 +68,7 @@ export class ProductManagementComponent implements OnInit {
       : '';
     
     // Set image preview if editing
-    this.selectedImagePreview = product.image_url || null;
+    this.selectedImagePreview = `${environment.apiBase}${product.image_url}` || null;
     this.selectedImageFile = null;
     
     // Properly map the product data to form controls

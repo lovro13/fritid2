@@ -51,6 +51,6 @@ export class UserService {
 
   // Checkout operation
   createOrder(orderData: any): Observable<Order> {
-    return this.http.post<Order>(`${this.apiUrl}/checkout`, orderData);
+    return this.http.post<Order>(`${this.apiUrl}/order`, orderData);
   }
 }

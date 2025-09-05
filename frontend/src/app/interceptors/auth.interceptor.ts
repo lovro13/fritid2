@@ -5,7 +5,27 @@ import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { TokenService } from '../service/token.service';
 
-export function authInterceptor(request: HttpRequest<unknown>, next: HttpHandlerFn): Observable<HttpEvent<unknown>> {
+/**
+ * HTTP Interceptor that automatically handles authentication for all HTTP requests.
+ * 
+ * This interceptor is used in the app.config.:
+ * - Automatically attaches Bearer tokens to outgoing requests
+ * - Handles 401 Unauthorized responses by clearing tokens and redirecting to login
+ * - Ensures consistent authentication behavior across the application
+ * 
+ * @param request - The outgoing HTTP request
+ * @param next - The next handler in the interceptor chain
+ * @returns Observable<HttpEvent<unknown>> - The HTTP response observable
+ * 
+ * @example
+ * ```typescript
+ * // Configured in app.config.ts
+ * provideHttpClient(withInterceptors([authInterceptor]))
+ * ```
+ */
+export function authInterceptor(request: HttpRequest<unknown>,
+   next: HttpHandlerFn
+  ): Observable<HttpEvent<unknown>> {
   const router = inject(Router);
   const tokenService = inject(TokenService);
   
