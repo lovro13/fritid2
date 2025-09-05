@@ -1,8 +1,8 @@
 const express = require('express');
-const { getToken, apiRequestToMinimax } = require('../minimax/client');
-const { getPool } = require('../database/db');
+const { getPool } = require('../services/dbService');
 const logger = require('../logger');
 const router = express.Router();
+const { getToken, apiRequestToMinimax } = require('../services/minimaxService')
 
 // POST /api/minimax/token
 router.post('/token', async (req, res) => {

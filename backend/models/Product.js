@@ -1,4 +1,4 @@
-const { getPool } = require('../database/db');
+const { getPool } = require('../services/dbService');
 
 class Product {
     constructor(productData) {

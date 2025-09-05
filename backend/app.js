@@ -10,9 +10,19 @@ const envPath = process.env.ENV_PATH;
 dotenv.config({ path: envPath });
 logger.info(`Loading environment from: ${envPath}`);
 
+// Validate required environment variables
+if (!process.env.JWT_SECRET) {
+    logger.error('FATAL: JWT_SECRET environment variable is not set');
+    process.exit(1);
+}
+
+if (process.env.JWT_SECRET.length < 32) {
+    logger.warn('WARNING: JWT_SECRET should be at least 32 characters long for security');
+}
+
 // Import database initialization
 logger.info(process.env.NODE_ENV)
-const { initializeDatabase } = require('./database/db');
+const { initializeDatabase } = require('./services/dbService');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');
@@ -29,9 +39,7 @@ const PORT = process.env.PORT;
 
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = isProduction 
-  ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : [])
-  : ['http://localhost:4200', 'http://127.0.0.1:4200']; 
+const allowedOrigins = process.env.FRONTEND_URL; 
 
 const corsOptions = {
   origin: (origin, callback) => {
@@ -82,7 +90,7 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    logger.error(err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
 });
 

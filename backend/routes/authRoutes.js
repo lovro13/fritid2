@@ -21,8 +21,8 @@ router.post('/register', async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '24h' }
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
         res.status(201).json({
@@ -56,8 +56,8 @@ router.post('/login', async (req, res) => {
         // Generate JWT token
         const token = jwt.sign(
             { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '24h' }
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
         res.json({
@@ -81,7 +81,7 @@ router.post('/verify', (req, res) => {
             return res.status(400).json({ error: 'Token is required' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         res.json({ valid: true, userId: decoded.id, role: decoded.role });
     } catch (error) {
         res.status(401).json({ valid: false, error: 'Invalid token' });

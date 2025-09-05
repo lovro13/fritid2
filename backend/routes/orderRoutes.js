@@ -4,7 +4,7 @@ const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
-const { createInvoiceForOrder } = require('../minimax/minimaxService');
+const { createInvoiceForOrder } = require('../services/minimaxService');
 const logger = require('../logger');
 
 const router = express.Router();
@@ -62,90 +62,136 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 
 // Create order (checkout)
 router.post('/', async (req, res) => {
+    console.log(req.body)
+    const { personInfo, cartItems, userId } = req.body;
+    if (!personInfo || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+        return res.status(400).json({ error: 'Invalid checkout data' });
+    }
+
     try {
-        const {
-            userId, cartItems, shippingInfo
-        } = req.body;
-        logger.info("Received", userId, cartItems, shippingInfo)
-        // Validate cart items and calculate total
-        let totalAmount = 0;
-        const orderItemsData = [];
+        // Calculate total amount
+        const totalAmount = cartItems.reduce((sum, item) => {
+            return sum + (item.product.price * item.quantity);
+        }, 0);
 
-        for (const item of cartItems) {
-            const product = await Product.findById(item.productId);
-            logger.info("Found product", product)
-            if (!product) {
-                return res.status(400).json({ error: `Product ${item.productId} not found` });
-            }
-            if (product.stockQuantity < item.quantity) {
-                return res.status(400).json({ 
-                    error: `Insufficient stock for product ${product.name}` 
-                });
-            }
-
-            const itemTotal = product.price * item.quantity;
-            totalAmount += itemTotal;
-
-            orderItemsData.push({
-                productId: product.id,
-                quantity: item.quantity,
-                price: product.price
-            });
-        }
-        logger.info("got all cartItems", cartItems)
         // Create order
         const order = await Order.create({
-            userId: userId || null, // Allow guest orders
-            totalAmount,
-            status: Order.STATUS.PENDING,
-            ...shippingInfo
+            userId: userId || null, // Handle guest checkout
+            totalAmount: totalAmount.toFixed(2),
+            status: 'Pending',
+            shippingFirstName: personInfo.firstName,
+            shippingLastName: personInfo.lastName,
+            shippingAddress: personInfo.address,
+            shippingEmail: personInfo.email,
+            shippingPhoneNumber: personInfo.phone,
+            shippingCity: personInfo.city,
+            shippingPostalCode: personInfo.postalCode,
         });
-        logger.info("Created order", order)
-        // Create order items
-        const orderItems = await Promise.all(
-            orderItemsData.map(item => 
-                OrderItem.create({
-                    orderId: order.id,
-                    productId: item.productId,
-                    quantity: item.quantity,
-                    price: item.price
-                })
-            )
-        );
-        // Update product stock
-        await Promise.all(
-            cartItems.map(item => 
-                Product.updateStock(item.productId, item.quantity)
-            )
-        );
-        
-        // Load the complete order with items
-        await order.loadOrderItems();
-        logger.info("Loaded order items")
-        
-        // Optionally auto-create Minimax invoice after order creation
-        if ((process.env.MINIMAX_INVOICE_ON_CREATE || '').toLowerCase() === 'true') {
-            logger.info("Creating minimax invoice")
-            try {
-                // Use Authorization header if present, otherwise env creds
-                const auth = req.headers['authorization'] || req.headers['Authorization'];
-                const bearer = auth && /^Bearer\s+(.+)$/i.test(auth) ? auth.split(/\s+/)[1] : null;
-                const invoiceResult = await createInvoiceForOrder({ orderId: order.id, bearerToken: bearer });
-                res.status(201).json({ order, invoice: invoiceResult.invoice });
-                logger.info("Created minimax invoice for order: ", order)
-                return;
-            } catch (invErr) {
-                logger.error('Failed to create Minimax invoice:', invErr);
-                // Still return order; surface invoice error separately
-                res.status(201).json({ order, invoiceError: invErr.message });
-                return;
-            }
+
+        if (!order) {
+            throw new Error('Failed to create order.');
         }
 
-        res.status(201).json(order);
+        // Create order items
+        console.log('Creating order items for order ID:', order.id);
+        
+        // Validate that all products exist before creating order items
+        const Product = require('../models/Product');
+        
+        // First, let's see what products exist in the database
+        const allProducts = await Product.findAll();
+        console.log('Available products in database:');
+        allProducts.forEach(p => {
+            console.log(`- Product ID: ${p.id}, Name: ${p.name}`);
+        });
+        
+        // Then validate each cart item
+        for (const item of cartItems) {
+            console.log(`Checking if product ID ${item.product.id} exists...`);
+            const product = await Product.findById(item.product.id);
+            if (!product) {
+                console.log(`❌ Product with ID ${item.product.id} not found in database`);
+                console.log('Available product IDs:', allProducts.map(p => p.id));
+                throw new Error(`Product with ID ${item.product.id} not found in database`);
+            }
+            console.log(`✅ Product ${item.product.id} exists in database`);
+        }
+        
+        const orderItemsPromises = cartItems.map(async (item) => {
+            console.log('Processing cart item:', {
+                productId: item.product.id,
+                productName: item.product.name,
+                quantity: item.quantity,
+                price: item.product.price,
+                selectedColor: item.selectedColor
+            });
+            
+            return OrderItem.create({
+                orderId: order.id,
+                productId: item.product.id,
+                quantity: item.quantity,
+                price: item.product.price
+            });
+        });
+
+        await Promise.all(orderItemsPromises);
+
+        // Always create the invoice after order creation using our own backend endpoint
+        logger.info("Creating minimax invoice")
+        try {
+            // Use Authorization header if present, otherwise get fresh token
+            const auth = req.headers['authorization'] || req.headers['Authorization'];
+            let bearer = auth && /^Bearer\s+(.+)$/i.test(auth) ? /^Bearer\s+(.+)$/i.exec(auth)[1] : null;
+            
+            // If no bearer token, get one from our backend
+            if (!bearer) {
+                const axios = require('axios');
+                const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+                const backendUrl = process.env.FULL_BACKEND_URL;
+                const baseUrl = `${protocol}://${backendUrl}`;
+                const tokenResponse = await axios.post(`${baseUrl}/minimax/token`, {});
+                bearer = tokenResponse.data.access_token;
+            }
+            
+            // Call our own backend endpoint to create invoice
+            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+            const backendUrl = process.env.FULL_BACKEND_URL;
+            const baseUrl = `${protocol}://${backendUrl}`;
+            const orgId = process.env.MINIMAX_ORG_ID;
+            
+            const invoiceResponse = await axios.post(
+                `${baseUrl}/minimax/orgs/${orgId}/issuedinvoices`,
+                { orderId: order.id },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${bearer}`
+                    }
+                }
+            );
+            
+            logger.info("Created minimax invoice for order: ", order.id)
+            return res.status(201).json({ 
+                success: true, 
+                message: 'Checkout successful', 
+                orderId: order.id, 
+                invoice: invoiceResponse.data 
+            });
+        } catch (invErr) {
+            logger.error('Failed to create Minimax invoice:', invErr);
+            // Don't crash checkout - still return success with error info
+            return res.status(201).json({ 
+                success: true, 
+                message: 'Checkout successful', 
+                orderId: order.id, 
+                invoiceError: 'Invoice creation failed but order was created successfully',
+                invoiceDetails: invErr.response?.data || invErr.message 
+            });
+        }
+
     } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order' });
+        console.error('Checkout error:', error);
+        res.status(500).json({ error: 'Failed to process checkout' });
     }
 });
 
