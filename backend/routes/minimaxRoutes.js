@@ -22,7 +22,7 @@ router.post('/token', async (req, res) => {
 // POST /api/minimax/orgs/:orgId/issuedinvoices - Create invoice for order
 router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
   try {
-    const orgId = process.env.MINIMAX_ORG_ID;
+    const orgId = req.params.orgId || process.env.MINIMAX_ORG_ID;
     
     // Always get a fresh Minimax token (ignore any JWT token from frontend)
     let token = null;
@@ -36,9 +36,6 @@ router.post('/orgs/:orgId/issuedinvoices', async (req, res) => {
     
     if (!token) return res.status(401).json({ error: 'Failed to get Minimax API token' });
 
-    // Debug logging
-    logger.info('Request body:', req.body);
-    logger.info('Request headers:', req.headers);
 
     // Get order data from database
     const orderId = req.body?.orderId;
