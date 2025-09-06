@@ -4,7 +4,6 @@ import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { CheckoutService, PersonInfo } from '../../service/checkout.service';
 import { AuthService } from '../../service/auth.service';
-import { UserProfileService } from '../../service/user-profile.service';
 import { CartService } from '../../service/cart.service';
 import { CartItem } from '../../models/cart.model';
 import localeDe from '@angular/common/locales/de';
@@ -44,7 +43,6 @@ export class CheckoutComponent {
     private router: Router,
     private checkoutService: CheckoutService, // Inject service
     private authService: AuthService,
-    private userProfileService: UserProfileService,
     private cartService: CartService
   ) {
     this.total = this.cartService.getTotal();
@@ -65,7 +63,7 @@ export class CheckoutComponent {
     this.cartSub = this.cartService.cartItems$.subscribe(items => { this.cartItems = items })
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.userProfileService.getUserById(currentUser.id).subscribe(
+      this.authService.getUserById(currentUser.id).subscribe(
         (user) => {
           // Auto-fill form with user data
           this.checkoutForm.patchValue({

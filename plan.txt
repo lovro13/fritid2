@@ -1,0 +1,13 @@
+Plan:
+-- gls api
+-- colors of products
+-- fix the plaćnik of minimax, and maybe the products
+
+
+Short term:
+-- delete checkout service and handle the deltition with adding it to other serveices
+-- make more frontend models/dto
+-- delete user or user-profile service
+-- make a structure for frontend:
+Component → Store (Observables/state) → API (HTTP).
+-- probably change my component structure to order, auth, shared, admin, catalog

@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CheckoutService } from '../../service/checkout.service';
 import { CartService } from '../../service/cart.service';
 import { AuthService } from '../../service/auth.service';
-import { UserProfileService } from '../../service/user-profile.service';
+import { UserProfileService } from '../../service/user-profile.api-service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
