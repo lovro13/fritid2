@@ -4,25 +4,38 @@ import { BehaviorSubject, Observable, of } from 'rxjs';
 import { tap, map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { TokenService } from './token.service';
+import { User } from '../models/user.model'
 
-export interface User {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  name: string;
-  address?: string;
-  postalCode?: string;
-  city?: string;
-  country?: string;
-  phoneNumber?: string;
-  role?: 'user' | 'admin';
-}
 
+/**
+ * AuthService
+ * 
+ * Core authentication service that manages:
+ * - User authentication state (login/logout)
+ * - JWT token management and validation
+ * - User session management across app lifecycle
+ * - Cross-tab authentication synchronization
+ * 
+ * This service handles ONLY authentication concerns. For user profile operations,
+ * use UserProfileService instead.
+ * 
+ * Key features:
+ * - Reactive state management with observables
+ * - Automatic token validation on app startup
+ * - Storage change detection for multi-tab scenarios
+ * - Graceful error handling and cleanup
+ * 
+ * Used by:
+ * - Route guards (auth.guard.ts, admin.guard.ts)
+ * - Authentication components (auth.component.ts)
+ * - Main app component for user state
+ */
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
+  // comprehensive authentication service that manages user authentication state, 
+  // token handling, and user session management
   private userSubject = new BehaviorSubject<User | null>(null);
   private tokenSubject = new BehaviorSubject<string | null>(null);
   private isInitialized = new BehaviorSubject<boolean>(false);

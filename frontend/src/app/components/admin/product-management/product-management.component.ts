@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { Product } from '../../../service/products.service';
+import { Product } from '../../../models/product.model';
 import { AdminService } from '../../../service/admin.service';
 import { environment } from '../../../../environments/environment';
 

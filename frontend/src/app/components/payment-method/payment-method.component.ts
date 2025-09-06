@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CheckoutService } from '../../service/checkout.service';
 import { CartService } from '../../service/cart.service';
 import { AuthService } from '../../service/auth.service';
+import { UserProfileService } from '../../service/user-profile.service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
@@ -31,6 +32,7 @@ export class PaymentMethodComponent implements OnInit {
     private checkoutService: CheckoutService,
     private cartService: CartService,
     private authService: AuthService,
+    private userProfileService: UserProfileService,
     private http: HttpClient,
     private router: Router) {
     this.cardForm = this.fb.group({
@@ -46,7 +48,7 @@ export class PaymentMethodComponent implements OnInit {
     // Auto-fill user data if logged in
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.authService.getUserById(currentUser.id).subscribe(
+      this.userProfileService.getUserById(currentUser.id).subscribe(
         (user) => {
           // Auto-fill name in card form
           this.cardForm.patchValue({

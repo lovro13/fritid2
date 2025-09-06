@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CartService } from '../../service/cart.service';
-import { Product, ProductsService } from "../../service/products.service";
+import { ProductsService } from "../../service/products.service";
+import { Product } from '../../models/product.model'
 import { FormsModule } from '@angular/forms';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { environment } from '../../../environments/environment';

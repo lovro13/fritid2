@@ -1,5 +1,6 @@
 import { Component, LOCALE_ID } from '@angular/core';
-import { CartItem, CartService } from '../../service/cart.service';
+import { CartService } from '../../service/cart.service';
+import { CartItem } from '../../models/cart.model';
 import { RouterLink } from '@angular/router';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Subscription } from 'rxjs';

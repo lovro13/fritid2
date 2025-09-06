@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { ProductsService, Product } from '../../service/products.service';
+import { ProductsService } from '../../service/products.service';
+import { Product } from '../../models/product.model';
 import { CartService } from '../../service/cart.service';
 import { Router, RouterLink } from '@angular/router';
 import { FormModule } from '@coreui/angular';

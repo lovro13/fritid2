@@ -1,12 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Product } from './products.service';
+import { CartItem } from '../models/cart.model';
+import { Product } from '../models/product.model';
 import { BehaviorSubject } from 'rxjs';
 
-export interface CartItem {
-  product: Product;
-  quantity: number;
-  selectedColor?: string;
-}
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
