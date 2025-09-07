@@ -29,9 +29,7 @@ const userRoutes = require('./routes/userRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const authRoutes = require('./routes/authRoutes');
-const checkoutRoutes = require('./routes/checkoutRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const minimaxRoutes = require('./routes/minimaxRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 
 const app = express();
@@ -73,15 +71,12 @@ initializeDatabase();
 
 // Routes
 app.use('/api/auth', authRoutes);
-// app.use('/api/checkout', checkoutRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 // The static middleware above handles GET requests, imageRoutes can handle other methods if needed.
 app.use('/api/images', imageRoutes);
-// Minimax API proxy endpoints
-app.use('/api/minimax', minimaxRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

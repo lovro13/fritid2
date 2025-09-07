@@ -82,7 +82,6 @@ async function getToken({ username, password }) {
   try {
     const res = await httpsRequest('POST', url, headers, form.toString());
     logger.info(`Token response status: ${res.status}`);
-    logger.info('Token response data:', res.data);
     
     if (res.status < 200 || res.status >= 300) {
       logger.error(`Token request failed with status ${res.status}:`, res.data);
