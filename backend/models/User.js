@@ -1,4 +1,4 @@
-const { getPool } = require('../services/dbService');
+const { getPool } = require('./dbModel');
 const bcrypt = require('bcryptjs');
 
 class User {
@@ -43,7 +43,7 @@ class User {
     static async create(userData) {
         const pool = getPool();
         const { firstName, lastName, email, password, role = 'user' } = userData;
-        const passwordHash = bcrypt.hashSync(password, 10);
+        const passwordHash = password ? bcrypt.hashSync(password, 10) : null;
 
         const [result] = await pool.execute(
             'INSERT INTO users (first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
@@ -78,7 +78,32 @@ class User {
     }
 
     async validatePassword(password) {
+        if (!this.passwordHash) {
+            return false; // No password hash means no valid password
+        }
         return bcrypt.compareSync(password, this.passwordHash);
+    }
+
+    async initPassword(password) {
+        if (!password) {
+            throw new Error('Password is required');
+        }
+        
+        // Check if user already has a password in the database
+        if (this.passwordHash !== null) {
+            throw new Error(`CRITICAL ERROR: Attempted to initialize password for user ${this.id} who already has a password set. This should never happen!`);
+        }
+        
+        const passwordHash = bcrypt.hashSync(password, 10);
+        const pool = getPool();
+        
+        await pool.execute(
+            'UPDATE users SET password_hash = ? WHERE id = ?',
+            [passwordHash, this.id]
+        );
+        
+        this.passwordHash = passwordHash;
+        return this;
     }
 
     isAdmin() {

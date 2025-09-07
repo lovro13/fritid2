@@ -1,4 +1,5 @@
-const { getPool } = require('../services/dbService');
+const { getPool } = require('./dbModel');
+const User = require('../models/User')
 
 class Order {
     constructor(orderData) {
@@ -49,11 +50,26 @@ class Order {
     static async create(orderData) {
         const pool = getPool();
         const {
-            userId, totalAmount, status = Order.STATUS.PENDING,
+            optUserId, totalAmount, status = Order.STATUS.PENDING,
             shippingFirstName, shippingLastName, shippingEmail,
             shippingAddress, shippingPostalCode, shippingCity, shippingPhoneNumber
         } = orderData;
-
+        let userId;
+        if (optUserId == null) {
+            const userData = {
+                firstName: shippingFirstName,
+                lastName: shippingLastName,
+                email: shippingEmail,
+                address: shippingAddress,
+                postalCode: shippingPostalCode,
+                city: shippingCity,
+                phoneNumber: shippingPhoneNumber
+            };
+            const newUser = await User.create(userData);
+            userId = newUser.id;
+        } else {
+            userId = optUserId
+        }
         const [result] = await pool.execute(
             `INSERT INTO orders 
              (user_id, total_amount, status, shipping_first_name, shipping_last_name, 

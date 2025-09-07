@@ -76,12 +76,49 @@ export class UserService {
   }
 
   constructor(private http: HttpClient) {
-    this.initializeAuth();
+    // Initialize immediately and synchronously
+    this.initializeSynchronously();
     
     // Listen for storage changes (e.g., when interceptor clears localStorage)
     window.addEventListener('storage', (event) => {
       if (event.key === 'token' || event.key === 'user') {
         this.handleStorageChange();
+      }
+    });
+  }
+
+  private initializeSynchronously(): void {
+    const storedUser = this.getUser();
+    const storedToken = this.getToken();
+    
+    if (storedUser && storedToken && !this.isTokenExpired(storedToken)) {
+      // Set user state immediately and synchronously
+      this.userSubject.next(storedUser);
+      this.tokenSubject.next(storedToken);
+    }
+    
+    // Mark as initialized immediately
+    this.isInitialized.next(true);
+    
+    // Validate token in background if exists
+    if (storedToken) {
+      setTimeout(() => {
+        this.validateTokenSilently(storedToken);
+      }, 100);
+    }
+  }
+
+  private validateTokenSilently(token: string): void {
+    this.validateToken(token).subscribe({
+      next: (isValid: boolean) => {
+        if (!isValid) {
+          console.warn('Token validation failed, logging out user');
+          this.logout();
+        }
+      },
+      error: (error) => {
+        console.error('Token validation error:', error);
+        this.logout();
       }
     });
   }
@@ -97,48 +134,10 @@ export class UserService {
     }
   }
 
-  private initializeAuth(): void {
-    // Check if user is already logged in from localStorage
-    const storedUser = this.getUser();
-    const storedToken = this.getToken();
-    
-    if (storedUser && storedToken) {
-      try {
-        // First, check if token is expired client-side
-        if (this.isTokenExpired(storedToken)) {
-          this.logout();
-          this.isInitialized.next(true);
-          return;
-        }
-
-        // Set the user and token immediately to prevent logout on reload
-        this.userSubject.next(storedUser);
-        this.tokenSubject.next(storedToken);
-        
-        // Then validate with server in background
-        this.validateToken(storedToken).subscribe({
-          next: (isValid: boolean) => {
-            if (!isValid) {
-              this.logout();
-            }
-            this.isInitialized.next(true);
-          },
-          error: () => {
-            this.logout();
-            this.isInitialized.next(true);
-          }
-        });
-      } catch (error) {
-        this.logout();
-        this.isInitialized.next(true);
-      }
-    } else {
-      this.isInitialized.next(true);
-    }
-  }
-
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    const token = this.getToken();
+    const user = this.userSubject.value;
+    return !!(token && user && !this.isTokenExpired(token));
   }
 
   isReady(): boolean {

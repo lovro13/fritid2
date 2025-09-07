@@ -22,7 +22,7 @@ if (process.env.JWT_SECRET.length < 32) {
 
 // Import database initialization
 logger.info(process.env.NODE_ENV)
-const { initializeDatabase } = require('./services/dbService');
+const { initializeDatabase } = require('./models/dbModel');
 
 // Import routes
 const userRoutes = require('./routes/userRoutes');

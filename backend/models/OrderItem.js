@@ -1,4 +1,4 @@
-const { getPool } = require('../services/dbService');
+const { getPool } = require('./dbModel');
 
 class OrderItem {
     constructor(orderItemData) {

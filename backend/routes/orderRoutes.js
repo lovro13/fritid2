@@ -64,13 +64,26 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 // Create order (checkout)
 router.post('/', async (req, res) => {
     logger.info('Processing checkout request', { body: req.body });
-    const { personInfo, cartItems, userId } = req.body;
+    const { personInfo, cartItems, userId: optUserId } = req.body;
     
     if (!personInfo || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
         return res.status(400).json({ error: 'Invalid checkout data' });
     }
 
     try {
+        let userId;
+        if (optUserId == null) {
+            const user = await User.findByEmail(personInfo.email);
+            if (user != null) {
+                console.log("found user via email", user.id);
+                userId = user.id;
+            } else {
+                userId = null;
+            }
+        } else {
+            userId = optUserId;
+        }
+        console.log("User id sent to orderService", userId)
         const result = await create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId });
         res.status(201).json(result);
     } catch (error) {

@@ -1,6 +1,6 @@
 const Order = require('../models/Order');
-const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
+const OrderItem = require('../models/OrderItem');
 const User = require('../models/User');
 const { getToken, apiRequestToMinimax } = require('./minimaxService');
 const logger = require('../logger');
@@ -14,8 +14,9 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
         }, 0);
 
         // Create order
+        logger.info("Do i have userid", userId);
         const order = await Order.create({
-            userId: userId || null, // Handle guest checkout
+            optUserId: userId,
             totalAmount: totalAmount.toFixed(2),
             status: 'Pending',
             shippingFirstName: personInfo.firstName,
@@ -33,9 +34,7 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
 
         // Create order items
         console.log('Creating order items for order ID:', order.id);
-        
-        // Validate that all products exist before creating order items
-        const Product = require('../models/Product');
+
         
         // First, let's see what products exist in the database
         const allProducts = await Product.findAll();
