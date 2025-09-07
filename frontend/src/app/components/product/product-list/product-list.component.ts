@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { ProductsService } from '../../service/products.service';
-import { Product } from '../../models/product.model';
-import { CartService } from '../../service/cart.service';
+import { ProductsService } from '../../../service/products.service';
+import { Product } from '../../../models/product.model';
+import { CartService } from '../../../service/cart.service';
 import { Router, RouterLink } from '@angular/router';
 import { FormModule } from '@coreui/angular';
 import { DecimalPipe } from '@angular/common';
@@ -9,7 +9,7 @@ import { LOCALE_ID } from '@angular/core';
 import { CommonModule, registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
 import { Observable } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../../environments/environment';
 
 registerLocaleData(localeDe);
 

@@ -3,26 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { User } from '../models/user.model';
-
-export interface Order {
-  id: number;
-  user_id: number;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  updated_at: string;
-  order_items: OrderItem[];
-}
-
-export interface OrderItem {
-  id: number;
-  order_id: number;
-  product_id: number;
-  quantity: number;
-  price: number;
-  product_name: string;
-  product_image_url: string;
-}
+import { Order, PersonInfo } from '../models/order.model';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -31,8 +13,15 @@ export class UserService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBase}`;
 
+  private personInfoSubject = new BehaviorSubject<PersonInfo | null>(null);
+  personInfo$ = this.personInfoSubject.asObservable();
+
+  setPersonInfo(info: PersonInfo) {
+    this.personInfoSubject.next(info);
+  }
+
   // User profile operations
-  getUserProfile(userId: number): Observable<User> {
+  getUserProfileById(userId: number): Observable<User> {
     return this.http.get<User>(`${this.apiUrl}/users/${userId}`);
   }
 
@@ -53,4 +42,9 @@ export class UserService {
   createOrder(orderData: any): Observable<Order> {
     return this.http.post<Order>(`${this.apiUrl}/order`, orderData);
   }
+
+  getUserById(id: number): Observable<User> {
+    return this.http.get<User>(`${environment.apiBase}/users/${id}`);
+  }
+
 }

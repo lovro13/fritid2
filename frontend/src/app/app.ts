@@ -3,7 +3,7 @@ import { CartService } from './service/cart.service';
 import { AuthService } from './service/auth.service';
 import { User } from './models/user.model';
 import { RouterLink, RouterOutlet } from '@angular/router';
-import { FooterComponent } from './components/footer/footer.component';
+import { FooterComponent } from './components/shared//footer/footer.component';
 import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
 

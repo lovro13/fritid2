@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
-import { ProductListComponent } from './components/product-list/product-list.component';
-import { CartComponent } from './components/cart/cart.component';
+import { ProductListComponent } from './components/product/product-list/product-list.component';
+import { CartComponent } from './components/product/cart/cart.component';
 import { ProductDetailComponent } from './components/product/product-detail/product-detail.component';
-import { Info } from './components/info/info';
-import { CheckoutComponent } from './components/checkout/checkout.component';
-import { PaymentMethodComponent } from './components/payment-method/payment-method.component';
-import { ThankYouComponent } from './components/thank-you/thank-you.component';
+import { Info } from './components/shared/info/info';
+import { CheckoutComponent } from './components/order/checkout/checkout.component';
+import { PaymentMethodComponent } from './components/order/payment-method/payment-method.component';
+import { ThankYouComponent } from './components/order/thank-you/thank-you.component';
 import { AuthComponent } from './components/auth/auth.component';
 import { ProductManagementComponent } from './components/admin/product-management/product-management.component';
 import { adminGuard } from './guards/admin.guard';

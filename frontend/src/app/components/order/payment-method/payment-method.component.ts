@@ -1,10 +1,9 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CheckoutService } from '../../../service/checkout.service';
 import { CartService } from '../../../service/cart.service';
 import { AuthService } from '../../../service/auth.service';
-import { UserProfileService } from '../../../service/user-profile.service';
+import { UserService } from '../../../service/user.service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
@@ -29,10 +28,9 @@ export class PaymentMethodComponent implements OnInit {
   cardForm: FormGroup;
 
   constructor(private fb: FormBuilder,
-    private checkoutService: CheckoutService,
     private cartService: CartService,
     private authService: AuthService,
-    private userProfileService: UserProfileService,
+    private UserService: UserService,
     private http: HttpClient,
     private router: Router) {
     this.cardForm = this.fb.group({
@@ -48,7 +46,7 @@ export class PaymentMethodComponent implements OnInit {
     // Auto-fill user data if logged in
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.userProfileService.getUserById(currentUser.id).subscribe(
+      this.UserService.getUserById(currentUser.id).subscribe(
         (user) => {
           // Auto-fill name in card form
           this.cardForm.patchValue({
@@ -89,7 +87,7 @@ export class PaymentMethodComponent implements OnInit {
 
       // Submit checkout data to backend
       combineLatest([
-        this.checkoutService.personInfo$,
+        this.UserService.personInfo$,
         this.cartService.cartItems$
       ])
         .pipe(take(1))
@@ -120,7 +118,7 @@ export class PaymentMethodComponent implements OnInit {
       // Use observables to get the latest values
       
       combineLatest([
-        this.checkoutService.personInfo$,
+        this.UserService.personInfo$,
         this.cartService.cartItems$
       ])
       .pipe(take(1))

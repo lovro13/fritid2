@@ -2,12 +2,13 @@ import { Component, LOCALE_ID, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { CheckoutService, PersonInfo } from '../../../service/checkout.service';
 import { AuthService } from '../../../service/auth.service';
 import { CartService } from '../../../service/cart.service';
 import { CartItem } from '../../../models/cart.model';
 import localeDe from '@angular/common/locales/de';
+import { UserService } from '../../../service/user.service';
 import { CommonModule, DecimalPipe, registerLocaleData } from '@angular/common';
+import { PersonInfo } from '../../../models/order.model';
 
 registerLocaleData(localeDe);
 
@@ -41,7 +42,7 @@ export class CheckoutComponent {
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private checkoutService: CheckoutService, // Inject service
+    private userService: UserService, // Inject service
     private authService: AuthService,
     private cartService: CartService
   ) {
@@ -63,7 +64,7 @@ export class CheckoutComponent {
     this.cartSub = this.cartService.cartItems$.subscribe(items => { this.cartItems = items })
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.authService.getUserById(currentUser.id).subscribe(
+      this.userService.getUserById(currentUser.id).subscribe(
         (user) => {
           // Auto-fill form with user data
           this.checkoutForm.patchValue({
@@ -85,7 +86,7 @@ export class CheckoutComponent {
 
   onSubmit() {
     if (this.checkoutForm.valid) {
-      this.checkoutService.setPersonInfo(this.checkoutForm.value as PersonInfo);
+      this.userService.setPersonInfo(this.checkoutForm.value as PersonInfo);
       console.log('Form Submitted', this.checkoutForm.value);
       console.log('With cart items:', this.cartItems);
       this.router.navigate(['/payment-method']);

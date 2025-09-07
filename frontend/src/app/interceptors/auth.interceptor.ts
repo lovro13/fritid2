@@ -3,7 +3,7 @@ import { HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angul
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { TokenService } from '../service/token.service';
+import { AuthService } from '../service/auth.service';
 
 /**
  * HTTP Interceptor that automatically handles authentication for all HTTP requests.
@@ -27,10 +27,10 @@ export function authInterceptor(request: HttpRequest<unknown>,
    next: HttpHandlerFn
   ): Observable<HttpEvent<unknown>> {
   const router = inject(Router);
-  const tokenService = inject(TokenService);
+  const authService = inject(AuthService);
   
   // Get the token from the token service
-  const token = tokenService.getToken();
+  const token = authService.getToken();
   
   // Clone the request and add authorization header if token exists
   if (token) {
@@ -46,7 +46,7 @@ export function authInterceptor(request: HttpRequest<unknown>,
     catchError((error: HttpErrorResponse) => {
       // If we get a 401 Unauthorized error, clear tokens and redirect
       if (error.status === 401) {
-        tokenService.clearAll();
+        authService.clearAll();
         router.navigate(['/auth']);
       }
       return throwError(() => error);

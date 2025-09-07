@@ -10,7 +10,6 @@ import { Product } from '../models/product.model';
 export class ProductsService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiBase}/products`;
-  private backendUrl = `${environment.apiBase}`;
 
   private products: Product[] = [];
 

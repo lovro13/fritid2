@@ -7,7 +7,7 @@ export class InfoList {
   private infoPages: InfoPage[] = [
     {
       id: 1, label: 'O nas', link: '/info/1', content:
-        `Podjetje FRITID d.o.o.  je slovensko podjetje, v katerem vam lahko po konkurenčnih cenah ponudimo stekleno embalažo kot tudi plastično embalažo različnih volumnov.
+`Podjetje FRITID d.o.o.  je slovensko podjetje, v katerem vam lahko po konkurenčnih cenah ponudimo stekleno embalažo kot tudi plastično embalažo različnih volumnov.
 
 Skladišče najdete na naslovu Ljubljanska cesta 45, ind. cona STOL, 1241 Kamnik. Obratovalni čas od ponedeljka do petka med 8.00 in 15 uro.
 
