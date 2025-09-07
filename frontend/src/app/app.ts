@@ -1,11 +1,11 @@
 import { Component } from '@angular/core';
-import { CartService } from './service/cart.service';
-import { AuthService } from './service/auth.service';
+import { UserService } from './service/user.service';
 import { User } from './models/user.model';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { FooterComponent } from './components/shared//footer/footer.component';
 import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
+import { ProductsService } from './service/products.service';
 
 @Component({
   selector: 'app-root',
@@ -21,8 +21,8 @@ export class App{
   }
 
   constructor(
-    private cartService: CartService, 
-    private authService: AuthService
+    private cartService: ProductsService, 
+    private authService: UserService
   ) {
     this.user$ = this.authService.user$;
   }
@@ -31,8 +31,5 @@ export class App{
     this.authService.logout();
   }
 
-  // In component class
-  testClick() {
-    console.log('Click registered!'); // If this logs, problem is with router
-  }
+
 }

@@ -1,10 +1,10 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService } from '../service/auth.service';
+import { UserService } from '../service/user.service';
 import { map, switchMap, of, filter, take } from 'rxjs';
 
 export const adminGuard: CanActivateFn = (route, state) => {
-  const authService = inject(AuthService);
+  const authService = inject(UserService);
   const router = inject(Router);
 
   // Wait for auth service to initialize before checking authentication

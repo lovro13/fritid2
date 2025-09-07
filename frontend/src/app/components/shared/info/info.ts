@@ -1,8 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, Injectable } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { InfoPage } from '../../../models/info.model';
 import { Subscription } from 'rxjs';
 
+@Injectable({
+  providedIn: 'root'
+})
 export class InfoList {
   private infoPages: InfoPage[] = [
     {

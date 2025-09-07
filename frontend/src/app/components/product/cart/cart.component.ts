@@ -1,11 +1,11 @@
 import { Component, LOCALE_ID } from '@angular/core';
-import { CartService } from '../../../service/cart.service';
 import { CartItem } from '../../../models/cart.model';
 import { RouterLink } from '@angular/router';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { registerLocaleData } from '@angular/common';
 import localeDe from '@angular/common/locales/de';
+import { ProductsService } from '../../../service/products.service';
 
 registerLocaleData(localeDe);
 
@@ -23,7 +23,7 @@ export class CartComponent {
   private cartSub!: Subscription;
   total = 0;
 
-  constructor(private cartService: CartService) {
+  constructor(private cartService: ProductsService ) {
     this.total = this.cartService.getTotal();
   }
 

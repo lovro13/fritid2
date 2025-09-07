@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CartService } from '../../../service/cart.service';
 import { ProductsService } from "../../../service/products.service";
 import { Product } from '../../../models/product.model'
 import { FormsModule } from '@angular/forms';
@@ -25,7 +24,6 @@ export class ProductDetailComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private productService: ProductsService,
-    private cartService: CartService
   ) { }
   
   ngOnInit() {
@@ -61,7 +59,7 @@ export class ProductDetailComponent implements OnInit {
   }
   
   addToCart(product: Product) {
-    this.cartService.addItemToCart(product, this.selectedQuantity, this.selectedColor);
+    this.productService.addItemToCart(product, this.selectedQuantity, this.selectedColor);
     // Reset quantity after adding to cart
     this.selectedQuantity = 1;
   }

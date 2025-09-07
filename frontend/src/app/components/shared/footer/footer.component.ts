@@ -10,8 +10,7 @@ import { InfoPage } from '../../../models/info.model';
   imports: [RouterLink]
 })
 export class FooterComponent {
-  constructor(private infoService: InfoList
-  ) { }
+  constructor(private infoService: InfoList) { }
 
   generalInfo: InfoPage[] = [];
   generalTerms: InfoPage[] = [];

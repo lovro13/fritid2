@@ -1,9 +1,9 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CartService } from '../../../service/cart.service';
-import { AuthService } from '../../../service/auth.service';
+import { ProductsService } from '../../../service/products.service';
 import { UserService } from '../../../service/user.service';
+import { OrderService } from '../../../service/order.service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
@@ -28,9 +28,10 @@ export class PaymentMethodComponent implements OnInit {
   cardForm: FormGroup;
 
   constructor(private fb: FormBuilder,
-    private cartService: CartService,
-    private authService: AuthService,
-    private UserService: UserService,
+    private cartService: ProductsService,
+    private authService: UserService,
+    private userService: UserService,
+    private orderService: OrderService,
     private http: HttpClient,
     private router: Router) {
     this.cardForm = this.fb.group({
@@ -46,14 +47,14 @@ export class PaymentMethodComponent implements OnInit {
     // Auto-fill user data if logged in
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.UserService.getUserById(currentUser.id).subscribe(
-        (user) => {
+      this.userService.getUserById(currentUser.id).subscribe(
+        (user: any) => {
           // Auto-fill name in card form
           this.cardForm.patchValue({
             cardHolder: `${user.firstName} ${user.lastName}`
           });
         },
-        (error) => {
+        (error: any) => {
           console.error('Failed to fetch user details:', error);
         }
       );
@@ -87,7 +88,7 @@ export class PaymentMethodComponent implements OnInit {
 
       // Submit checkout data to backend
       combineLatest([
-        this.UserService.personInfo$,
+        this.orderService.personInfo$,
         this.cartService.cartItems$
       ])
         .pipe(take(1))
@@ -118,7 +119,7 @@ export class PaymentMethodComponent implements OnInit {
       // Use observables to get the latest values
       
       combineLatest([
-        this.UserService.personInfo$,
+        this.orderService.personInfo$,
         this.cartService.cartItems$
       ])
       .pipe(take(1))

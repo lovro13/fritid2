@@ -2,13 +2,13 @@ import { Component, LOCALE_ID, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { AuthService } from '../../../service/auth.service';
-import { CartService } from '../../../service/cart.service';
+import { UserService } from '../../../service/user.service';
 import { CartItem } from '../../../models/cart.model';
 import localeDe from '@angular/common/locales/de';
-import { UserService } from '../../../service/user.service';
+import { OrderService } from '../../../service/order.service';
 import { CommonModule, DecimalPipe, registerLocaleData } from '@angular/common';
 import { PersonInfo } from '../../../models/order.model';
+import { ProductsService } from '../../../service/products.service';
 
 registerLocaleData(localeDe);
 
@@ -43,8 +43,9 @@ export class CheckoutComponent {
     private fb: FormBuilder,
     private router: Router,
     private userService: UserService, // Inject service
-    private authService: AuthService,
-    private cartService: CartService
+    private orderService: OrderService, // Inject order service
+    private authService: UserService,
+    private cartService: ProductsService
   ) {
     this.total = this.cartService.getTotal();
     this.checkoutForm = this.fb.group({
@@ -86,7 +87,7 @@ export class CheckoutComponent {
 
   onSubmit() {
     if (this.checkoutForm.valid) {
-      this.userService.setPersonInfo(this.checkoutForm.value as PersonInfo);
+      this.orderService.setPersonInfo(this.checkoutForm.value as PersonInfo);
       console.log('Form Submitted', this.checkoutForm.value);
       console.log('With cart items:', this.cartItems);
       this.router.navigate(['/payment-method']);

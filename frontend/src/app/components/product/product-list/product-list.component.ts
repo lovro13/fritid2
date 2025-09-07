@@ -1,7 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ProductsService } from '../../../service/products.service';
 import { Product } from '../../../models/product.model';
-import { CartService } from '../../../service/cart.service';
 import { Router, RouterLink } from '@angular/router';
 import { FormModule } from '@coreui/angular';
 import { DecimalPipe } from '@angular/common';
@@ -26,7 +25,6 @@ registerLocaleData(localeDe);
 export class ProductListComponent implements OnInit {
   products$: Observable<Product[]>;
   private productsService = inject(ProductsService);
-  private cartService = inject(CartService);
   private router = inject(Router);
 
   constructor() {

@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CartService } from '../../../service/cart.service';
-
+import { ProductsService } from '../../../service/products.service';
 @Component({
   standalone: true,
   selector: 'app-thank-you',
@@ -13,7 +12,7 @@ export class ThankYouComponent {
   
   constructor(
     private router: Router,
-    private cartService: CartService
+    private cartService: ProductsService
   ) {
     // Clear the cart after successful order
     this.cartService.clearCart();
