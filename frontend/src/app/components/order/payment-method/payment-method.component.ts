@@ -1,14 +1,14 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CheckoutService } from '../../service/checkout.service';
-import { CartService } from '../../service/cart.service';
-import { AuthService } from '../../service/auth.service';
-import { UserProfileService } from '../../service/user-profile.service';
+import { CheckoutService } from '../../../service/checkout.service';
+import { CartService } from '../../../service/cart.service';
+import { AuthService } from '../../../service/auth.service';
+import { UserProfileService } from '../../../service/user-profile.service';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   standalone: true,

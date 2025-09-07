@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { InfoPage, InfoService } from '../../service/info.service';
-import { Info } from '../info/info';
+import { InfoList } from '../info/info';
+import { InfoPage } from '../../../models/info.model';
 
 @Component({
   selector: 'app-footer',
@@ -10,7 +10,7 @@ import { Info } from '../info/info';
   imports: [RouterLink]
 })
 export class FooterComponent {
-  constructor(private infoService: InfoService
+  constructor(private infoService: InfoList
   ) { }
 
   generalInfo: InfoPage[] = [];

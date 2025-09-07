@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CartService } from '../../service/cart.service';
+import { CartService } from '../../../service/cart.service';
 
 @Component({
   standalone: true,

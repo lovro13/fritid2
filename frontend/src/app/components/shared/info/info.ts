@@ -1,14 +1,9 @@
-import { Injectable } from '@angular/core';
+import { Component } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { InfoPage } from '../../../models/info.model';
+import { Subscription } from 'rxjs';
 
-export interface InfoPage {
-  id: number,
-  label: string,
-  link: string,
-  content: string
-}
-
-@Injectable({ providedIn: 'root' })
-export class InfoService {
+export class InfoList {
   private infoPages: InfoPage[] = [
     {
       id: 1, label: 'O nas', link: '/info/1', content:
@@ -173,4 +168,45 @@ Vse vsebine, ki so objavljene na stranehwww.fritid.si, so last podjeta FRITID d.
       }
       throw new Error("wrong id");
     }
+}
+
+
+@Component({
+  selector: 'app-info',
+  imports: [],
+  templateUrl: './info.html',
+  styleUrl: './info.scss'
+})
+export class Info {
+
+  infoPage: any;
+  private routeSubscription!: Subscription;
+
+
+  constructor(
+    private route: ActivatedRoute,
+    private infoService: InfoList
+  ) { }
+
+  ngOnInit() {
+    this.loadInfoPage();
+    this.routeSubscription = this.route.paramMap.subscribe(() => {
+      this.loadInfoPage();
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.routeSubscription) {
+      this.routeSubscription.unsubscribe();
+    }
+  }
+
+  private loadInfoPage() {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id !== null) {
+      this.infoPage = this.infoService.getInfoPageById(id);
+    } else {
+      console.error("Info page id not found in route");
+    }
+  }
 }

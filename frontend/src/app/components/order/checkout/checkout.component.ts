@@ -2,10 +2,10 @@ import { Component, LOCALE_ID, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { CheckoutService, PersonInfo } from '../../service/checkout.service';
-import { AuthService } from '../../service/auth.service';
-import { CartService } from '../../service/cart.service';
-import { CartItem } from '../../models/cart.model';
+import { CheckoutService, PersonInfo } from '../../../service/checkout.service';
+import { AuthService } from '../../../service/auth.service';
+import { CartService } from '../../../service/cart.service';
+import { CartItem } from '../../../models/cart.model';
 import localeDe from '@angular/common/locales/de';
 import { CommonModule, DecimalPipe, registerLocaleData } from '@angular/common';
 
