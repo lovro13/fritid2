@@ -10,4 +10,3 @@ Short term:
 -- delete user or user-profile service
 -- make a structure for frontend:
 Component → Store (Observables/state) → API (HTTP).
--- probably change my component structure to order, auth, shared, admin, catalog
