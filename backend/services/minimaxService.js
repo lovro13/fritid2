@@ -1,60 +1,14 @@
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User')
 const logger = require('../logger');
+const { httpsRequest } = require('./httpRequestsService')
 
-const https = require('https');
-const { URL } = require('url');
 
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
 const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
 
-function cfg(name, def = undefined) {
-  const v = process.env[name];
-  return v === undefined || v === '' ? def : v;
-}
 
-
-function httpsRequest(method, urlString, headers = {}, body = null) {
-  return new Promise((resolve, reject) => {
-    try {
-      const url = new URL(urlString);
-
-      const options = {
-        method,
-        hostname: url.hostname,
-        path: url.pathname + (url.search || ''),
-        headers: headers || {},
-      };
-
-      const req = https.request(options, (res) => {
-        let data = '';
-        res.on('data', (chunk) => (data += chunk));
-        res.on('end', () => {
-          const contentType = res.headers['content-type'] || '';
-          if (contentType.includes('application/json')) {
-            try {
-              resolve({ status: res.statusCode, headers: res.headers, data: JSON.parse(data || '{}') });
-            } catch (e) {
-              // Fallback to raw if JSON parse fails
-              resolve({ status: res.statusCode, headers: res.headers, data });
-            }
-          } else {
-            resolve({ status: res.statusCode, headers: res.headers, data });
-          }
-        });
-      });
-
-      req.on('error', (err) => reject(err));
-
-      if (body) {
-        req.write(body);
-      }
-      req.end();
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
 
 async function getToken({ username, password }) {
   logger.info("getToken called")
@@ -247,9 +201,81 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
   }
 }
 
+async function createNewCustomer({customerId, bearerToken = null}) {
+  if (!customerId) throw new Error('customerId is required');
+  
+  const orgId = process.env.MINIMAX_ORG_ID;
+  if (!orgId) throw new Error('MINIMAX_ORG_ID not set');
+
+  const code = "api" + customerId;
+  const user = await User.findById(customerId);
+  
+  if (!user) {
+    const e = new Error('User not found');
+    e.status = 404;
+    throw e;
+  }
+
+  const fullName = (user.firstName || '') + ' ' + (user.lastName || '');
+  const address = user.address || '';
+  const postalCode = user.postalCode || '';
+  const city = user.city || '';
+  
+  const body = {
+    Code: code,
+    Name: fullName.trim(),
+    Address: address,
+    PostalCode: postalCode,
+    City: city
+  };
+
+  let token = bearerToken;
+  if (!token) {
+    const u = process.env.MINIMAX_USERNAME;
+    const p = process.env.MINIMAX_PASSWORD;
+    if (!u || !p) throw new Error('Provide Bearer token or set MINIMAX_USERNAME and MINIMAX_PASSWORD');
+    const t = await getToken({ username: u, password: p });
+    token = t.access_token;
+    logger.info("Created new token for customer creation");
+  }
+
+  logger.info("Sending request to minimax to create customer with body", body);
+
+  try {
+    const result = await apiRequestToMinimax({
+      method: 'POST',
+      path: `orgs/${encodeURIComponent(orgId)}/customers`,
+      token,
+      body,
+    });
+    logger.info("Successfully created customer in minimax");
+    return { customerId: user.id, customer: result };
+  } catch (error) {
+    // If token is invalid and we used bearerToken, try with fresh env token
+    if (error?.response?.status === 401 && bearerToken) {
+      logger.info("Bearer token invalid, trying with fresh env token for customer creation");
+      const u = process.env.MINIMAX_USERNAME;
+      const p = process.env.MINIMAX_PASSWORD;
+      if (u && p) {
+        const t = await getToken({ username: u, password: p });
+        const result = await apiRequestToMinimax({
+          method: 'POST',
+          path: `orgs/${encodeURIComponent(orgId)}/customers`,
+          token: t.access_token,
+          body,
+        });
+        logger.info("Successfully created customer in minimax with fresh token");
+        return { customerId: user.id, customer: result };
+      }
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   getToken,
   createInvoiceForOrder,
-  apiRequestToMinimax
+  apiRequestToMinimax,
+  createNewCustomer
 };
 

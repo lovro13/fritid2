@@ -25,6 +25,53 @@
     </div>
 </div>
 
+<!-- Product Categories Section -->
+<div class="categories-section">
+    <h2>Kategorije izdelkov</h2>
+    <div class="categories-container">
+        <!-- Always show "All Products" first -->
+        <div class="category-item"
+             [class.active]="selectedCategory === 'all'"
+             (click)="filterByCategory('all')">
+            <div class="category-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path [attr.d]="getCategoryIcon('all')"></path>
+                </svg>
+            </div>
+            <h3>{{ getCategoryDisplayName('all') }} <span class="count">({{ getCategoryCount('all') }})</span></h3>
+            <p>{{ getCategoryDescription('all') }}</p>
+        </div>
+        
+        <!-- Dynamically show all available categories -->
+        <div *ngFor="let category of availableCategories; trackBy: trackByCategory" 
+             class="category-item"
+             [class.active]="selectedCategory === category"
+             (click)="filterByCategory(category)">
+            <div class="category-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path [attr.d]="getCategoryIcon(category)"></path>
+                </svg>
+            </div>
+            <h3>{{ getCategoryDisplayName(category) }} <span class="count">({{ getCategoryCount(category) }})</span></h3>
+            <p>{{ getCategoryDescription(category) }}</p>
+        </div>
+        
+        <!-- Always show "Others" last if there are uncategorized products -->
+        <div *ngIf="getCategoryCount('others') > 0"
+             class="category-item"
+             [class.active]="selectedCategory === 'others'"
+             (click)="filterByCategory('others')">
+            <div class="category-icon">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path [attr.d]="getCategoryIcon('others')"></path>
+                </svg>
+            </div>
+            <h3>{{ getCategoryDisplayName('others') }} <span class="count">({{ getCategoryCount('others') }})</span></h3>
+            <p>{{ getCategoryDescription('others') }}</p>
+        </div>
+    </div>
+</div>
+
 <!-- Products Section -->
 <div class="products-section">
     <h2>Naši izdelki</h2>

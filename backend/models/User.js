@@ -25,13 +25,13 @@ class User {
     static async findById(id) {
         const pool = getPool();
         const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
-        return rows.length > 0 ? new User(rows[0]) : null;
+        return rows.length == 1 ? new User(rows[0]) : null;
     }
 
     static async findByEmail(email) {
         const pool = getPool();
         const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
-        return rows.length > 0 ? new User(rows[0]) : null;
+        return rows.length == 1 ? new User(rows[0]) : null;
     }
 
     static async emailExists(email) {
