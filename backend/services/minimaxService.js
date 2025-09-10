@@ -35,7 +35,7 @@ async function getToken({ username, password }) {
   
   try {
     const res = await httpsRequest('POST', url, headers, form.toString());
-    logger.info(`Token response status: ${res.status}`);
+    logger.info(`Token response status: ${res.status, url}`);
     
     if (res.status < 200 || res.status >= 300) {
       logger.error(`Token request failed with status ${res.status}:`, res.data);
@@ -46,6 +46,7 @@ async function getToken({ username, password }) {
     return res.data;
   } catch (error) {
     logger.error('Token request error:', error.message);
+    logger.info('It crashed with', (url, headers))
     if (error.response) {
       logger.error('Error response:', error.response);
     }
@@ -88,7 +89,7 @@ async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, bo
 
 
 async function buildInvoiceBodyFromOrder(order) {
-  const currencyId = parseInt(process.envMINIMAX_CURRENCY_ID, 10);
+  const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
   const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
   const itemId = parseInt(process.env.MINIMAX_ITEM_ID, 10);
   const customerId = parseInt(process.env.MINIMAX_CUSTOMER_ID, 10);

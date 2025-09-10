@@ -17,7 +17,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 if (process.env.JWT_SECRET.length < 32) {
-    logger.warn('WARNING: JWT_SECRET should be at least 32 characters long for security');
+  logger.warn('WARNING: JWT_SECRET should be at least 32 characters long for security');
 }
 
 // Import database initialization
@@ -44,8 +44,8 @@ const corsOptions = {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.length === 0 && !isProduction) { 
-        // Allow all origins in dev if FRONTEND_URL is not set
-        return callback(null, true);
+      // Allow all origins in dev if FRONTEND_URL is not set
+      return callback(null, true);
     }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -68,6 +68,10 @@ app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'u
 
 // Initialize database
 initializeDatabase();
+
+const {createNewCustomer} = require('./services/minimaxService')
+logger.info("Trying new function createNewUser")
+createNewCustomer({customerId: 33})
 
 // Routes
 app.use('/api/auth', authRoutes);

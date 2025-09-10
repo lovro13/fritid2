@@ -85,6 +85,17 @@ router.post('/', async (req, res) => {
         }
         console.log("User id sent to orderService", userId)
         const result = await create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId });
+        
+        // Check if minimax integration failed
+        if (result.invoiceError) {
+            logger.error('Minimax integration failed for order:', result.orderId, result.invoiceError);
+            return res.status(500).json({ 
+                error: 'Order created but invoice generation failed', 
+                details: result.invoiceError,
+                orderId: result.orderId 
+            });
+        }
+        
         res.status(201).json(result);
     } catch (error) {
         logger.error('Checkout error:', error);

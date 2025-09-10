@@ -43,4 +43,4 @@ function httpsRequest(method, urlString, headers = {}, body = null) {
   });
 }
 
-module.export = httpsRequest;
+module.exports = {httpsRequest};
