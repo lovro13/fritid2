@@ -100,3 +100,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+logger.info("Succesfuly made endpoints with no error found!")

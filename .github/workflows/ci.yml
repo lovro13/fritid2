@@ -118,25 +118,43 @@ jobs:
         
       - name: Check backend startup
         run: |
-          # Start the server in background
-          npm start &
+          # Start the server in background and log to a file
+          npm start > server.log 2>&1 &
           SERVER_PID=$!
           echo "Started server with PID: $SERVER_PID"
           
-          # Wait 20 seconds
-          echo "Waiting 20 seconds to check if server starts without errors..."
-          sleep 20
+          # Wait for the success message with timeout
+          echo "Waiting for server to start (checking for success message)..."
+          timeout=60
+          elapsed=0
           
-          # Check if process is still running (no crash)
-          if kill -0 $SERVER_PID 2>/dev/null; then
-            echo "✅ Server is running successfully after 20 seconds!"
-            # Kill the server
-            kill $SERVER_PID
-            echo "Server stopped"
-          else
-            echo "❌ Server crashed or failed to start"
-            exit 1
-          fi
+          while [ $elapsed -lt $timeout ]; do
+            if grep -q "Succesfuly made endpoints with no error found!" server.log; then
+              echo "✅ Server started successfully! Found success message in log."
+              # Kill the server
+              kill $SERVER_PID
+              echo "Server stopped"
+              exit 0
+            fi
+            
+            # Check if process crashed
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "❌ Server process crashed!"
+              echo "Server logs:"
+              cat server.log
+              exit 1
+            fi
+            
+            sleep 1
+            elapsed=$((elapsed + 1))
+          done
+          
+          # Timeout reached
+          echo "❌ Timeout reached waiting for server startup message"
+          echo "Server logs:"
+          cat server.log
+          kill $SERVER_PID 2>/dev/null
+          exit 1
         working-directory: ./backend
         env:
           NODE_ENV: test
