@@ -154,7 +154,8 @@ async function createNewCustomer({customerId, bearerToken = null}) {
     Address: address,
     PostalCode: postalCode,
     City: city,
-    Usage: "D",
+    Usage: "K",
+    SubjectToVAT: "N",
     TaxNumber: ""
   };
   logger.info("Trying to create a customer with body", body)
