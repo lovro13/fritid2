@@ -69,9 +69,6 @@ app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'u
 // Initialize database
 initializeDatabase();
 
-const {createNewCustomer} = require('./services/minimaxService')
-logger.info("Trying new function createNewUser")
-createNewCustomer({customerId: 79})
 
 // Routes
 app.use('/api/auth', authRoutes);
