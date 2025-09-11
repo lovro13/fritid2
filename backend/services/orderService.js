@@ -2,7 +2,8 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const OrderItem = require('../models/OrderItem');
 const User = require('../models/User');
-const { getToken, apiRequestToMinimax } = require('./minimaxService');
+const { apiRequestToMinimax } = require('./minimaxService');
+const { getToken } = require('./httpRequestsService')
 const logger = require('../logger');
 
 async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId }) {

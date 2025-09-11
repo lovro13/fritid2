@@ -59,7 +59,7 @@ const corsOptions = {
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
-app.use(cors(corsOptions)); // TEMPORARILY DISABLED
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -71,7 +71,7 @@ initializeDatabase();
 
 const {createNewCustomer} = require('./services/minimaxService')
 logger.info("Trying new function createNewUser")
-createNewCustomer({customerId: 33})
+createNewCustomer({customerId: 79})
 
 // Routes
 app.use('/api/auth', authRoutes);

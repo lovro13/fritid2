@@ -64,7 +64,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 // Create order (checkout)
 router.post('/', async (req, res) => {
     logger.info('Processing checkout request', { body: req.body });
-    const { personInfo, cartItems, userId: optUserId } = req.body;
+    const { personInfo, cartItems, optUserId } = req.body;
     
     if (!personInfo || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
         return res.status(400).json({ error: 'Invalid checkout data' });
@@ -78,12 +78,51 @@ router.post('/', async (req, res) => {
                 console.log("found user via email", user.id);
                 userId = user.id;
             } else {
-                userId = null;
+                // Create new user from shipping info with null password
+                console.log("Creating new user from shipping info");
+                const newUser = await User.create({
+                    firstName: personInfo.firstName,
+                    lastName: personInfo.lastName,
+                    email: personInfo.email,
+                    password: null, // Leave password null
+                    role: 'user'
+                });
+                
+                // Update with shipping details
+                newUser.address = personInfo.address;
+                newUser.postalCode = personInfo.postalCode;
+                newUser.city = personInfo.city;
+                newUser.phoneNumber = personInfo.phone;
+                await newUser.save();
+                
+                userId = newUser.id;
+                console.log("Created new user with ID:", userId);
             }
         } else {
             userId = optUserId;
         }
         console.log("User id sent to orderService", userId)
+        
+        // Update user information with shipping details if user exists
+        if (userId) {
+            try {
+                const user = await User.findById(userId);
+                if (user) {
+                    // Update user's address information with shipping info
+                    user.address = personInfo.address || user.address;
+                    user.postalCode = personInfo.postalCode || user.postalCode;
+                    user.city = personInfo.city || user.city;
+                    user.phoneNumber = personInfo.phone || user.phoneNumber;
+                    
+                    await user.save();
+                    logger.info(`Updated user ${userId} with shipping information from order`);
+                }
+            } catch (userUpdateError) {
+                logger.error('Failed to update user information:', userUpdateError);
+                // Don't fail the order creation if user update fails
+            }
+        }
+        
         const result = await create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId });
         
         // Check if minimax integration failed
