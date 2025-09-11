@@ -2,7 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const OrderItem = require('../models/OrderItem');
 const User = require('../models/User');
-const { apiRequestToMinimax } = require('./minimaxService');
+const { apiRequestToMinimax, getCustomerId } = require('./minimaxService');
 const { getToken } = require('./httpRequestsService')
 const logger = require('../logger');
 
@@ -153,8 +153,12 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             };
             });
 
+            // Get the customer ID (this is async)
+            const customerId = await getCustomerId(orderData);
+            logger.info('Using customer ID for invoice:', customerId);
+
             const invoicePayload = {
-            Customer: { ID: process.env.MINIMAX_CUSTOMER_ID },
+            Customer: { ID: customerId },
             DateIssued: date,
             DateTransaction: date,
             DateTransactionFrom: date,
@@ -228,7 +232,6 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             };
         } catch (invErr) {
             logger.error('Failed to create Minimax invoice:', invErr);
-            // Don't crash checkout - still return success with error info
             return {
                 success: true, 
                 message: 'Checkout successful', 

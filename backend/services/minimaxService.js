@@ -2,7 +2,7 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User')
 const logger = require('../logger');
-const { apiRequestToMinimax, getToken } = require('./httpRequestsService')
+const { apiRequestToMinimax, getToken, httpsRequest } = require('./httpRequestsService');
 
 
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
@@ -11,10 +11,16 @@ const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
 
 
 async function buildInvoiceBodyFromOrder(order) {
+  const orgId = process.env.MINIMAX_ORG_ID;
   const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
   const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
   const itemId = parseInt(process.env.MINIMAX_ITEM_ID, 10);
+  
+  logger.info("Getting customer ID for order:", order.id);
+  // Temporarily use static customer ID while debugging
   const customerId = parseInt(process.env.MINIMAX_CUSTOMER_ID, 10);
+  logger.info("Using static customer ID:", customerId);
+  
   const paymentMethodId = parseInt(process.env.MINIMAX_PAYMENT_METHOD_ID, 10);
 
   if (!orgId) throw new Error('MINIMAX_ORG_ID not set');
@@ -202,9 +208,61 @@ async function createNewCustomer({customerId, bearerToken = null}) {
   }
 }
 
+async function getCustomerId(order) {
+  // Gets customer id of an order or creates it
+  
+  const orgId = process.env.MINIMAX_ORG_ID;
+  const code = "api" + order.userId;
+  
+  // Get token for API requests
+  let token;
+  const u = process.env.MINIMAX_USERNAME;
+  const p = process.env.MINIMAX_PASSWORD;
+  if (!u || !p) throw new Error('MINIMAX_USERNAME and MINIMAX_PASSWORD required');
+  const t = await getToken({ username: u, password: p });
+  token = t.access_token;
+
+  // First try to find if customer already exists in minimax system
+  try {
+    logger.info(`Checking if customer with code '${code}' exists in Minimax`);
+    
+    const existingCustomer = await apiRequestToMinimax({
+      method: 'GET',
+      path: `orgs/${encodeURIComponent(orgId)}/customers/code(${encodeURIComponent(code)})`,
+      token,
+    });
+    
+    if (existingCustomer && existingCustomer.CustomerId) {
+      logger.info(`Found existing customer in Minimax with ID: ${existingCustomer.CustomerId}`);
+      return existingCustomer.CustomerId;
+    }
+  } catch (error) {
+    // Customer doesn't exist (404) or other error - we'll create new one
+    logger.info(`Customer with code '${code}' not found in Minimax, will create new one`);
+  }
+
+  // If customer doesn't exist, create new customer
+  try {
+    logger.info(`Creating new customer in Minimax for user ID: ${order.userId}`);
+    const newCustomer = await createNewCustomer({
+      customerId: order.userId,
+      bearerToken: token
+    });
+    
+    logger.info(`Successfully created new customer with ID: ${newCustomer.customer.CustomerId}`);
+    return newCustomer.customer.CustomerId;
+    
+  } catch (createError) {
+    logger.error('Failed to create new customer:', createError);
+    throw createError;
+  }
+}
+
 module.exports = {
+  getToken,
   createInvoiceForOrder,
   apiRequestToMinimax,
-  createNewCustomer
+  createNewCustomer,
+  getCustomerId
 };
 
