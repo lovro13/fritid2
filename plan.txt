@@ -1,7 +1,7 @@
 Plan:
 -- gls api
--- colors of products
--- fix the plaćnik of minimax, and maybe the products
+-- maybe make products coordinated with my database and the minimax, if this doesnt work alredy,
+I would need to look it up
 
 
 Short term:
@@ -10,3 +10,7 @@ Short term:
 -- delete user or user-profile service
 -- make a structure for frontend:
 Component → Store (Observables/state) → API (HTTP).
+
+-- price on the payment method doesnt show, it would be a good idea to show some summaraziton 
+of order before the customer gets to pay
+-- make sure the user can change the number of product he will buy in the cart
