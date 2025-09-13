@@ -423,6 +423,102 @@ h2 {
   }
 }
 
+// Order Summary Styling
+.order-summary {
+  background: $white;
+  border-radius: 15px;
+  padding: 2rem;
+  margin: 0 auto 3rem auto;
+  max-width: 1200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid $border-color;
+  
+  h3 {
+    color: $text-primary;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid $border-color;
+  }
+}
+
+.order-items {
+  margin-bottom: 1.5rem;
+  
+  .order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid rgba(225, 232, 237, 0.5);
+    
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .item-name {
+      flex: 1;
+      color: $text-primary;
+      font-weight: 500;
+    }
+    
+    .item-quantity {
+      margin: 0 1rem;
+      color: $text-secondary;
+      font-size: 0.9rem;
+      min-width: 40px;
+      text-align: center;
+    }
+    
+    .item-price {
+      color: $text-primary;
+      font-weight: 600;
+      min-width: 80px;
+      text-align: right;
+    }
+  }
+}
+
+.order-totals {
+  border-top: 2px solid $border-color;
+  padding-top: 1rem;
+  
+  .total-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    color: $text-secondary;
+    
+    &.total-amount {
+      border-top: 2px solid $border-color;
+      padding-top: 1rem;
+      margin-top: 0.5rem;
+      color: $text-primary;
+      font-size: 1.1rem;
+      
+      span {
+        color: $text-primary;
+      }
+    }
+  }
+  
+  .free-shipping-note {
+    text-align: center;
+    padding: 0.5rem;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border: 1px solid #c3e6cb;
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    
+    small {
+      color: #155724;
+      font-weight: 500;
+    }
+  }
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .payment-container {
@@ -448,6 +544,24 @@ h2 {
     padding: 2rem 1.5rem;
   }
   
+  .order-summary {
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    
+    .order-item {
+      flex-wrap: wrap;
+      
+      .item-name {
+        flex-basis: 100%;
+        margin-bottom: 0.5rem;
+      }
+      
+      .item-quantity, .item-price {
+        margin: 0;
+      }
+    }
+  }
+  
   .form-row {
     flex-direction: column;
     gap: 0;
@@ -466,6 +580,15 @@ h2 {
   
   .payment-form {
     padding: 1.5rem 1rem;
+  }
+  
+  .order-summary {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    
+    h3 {
+      font-size: 1.2rem;
+    }
   }
   
   .bank-options {

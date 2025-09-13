@@ -1,11 +1,22 @@
 export interface Order {
   id: number;
   user_id: number;
+  userId: number;
   total_amount: number;
+  totalAmount: number;
   status: string;
+  shippingFirstName?: string;
+  shippingLastName?: string;
+  shippingEmail?: string;
+  shippingAddress?: string;
+  shippingPostalCode?: string;
+  shippingCity?: string;
+  shippingPhoneNumber?: string;
   created_at: string;
+  createdAt: string;
   updated_at: string;
   order_items: OrderItem[];
+  orderItems: OrderItem[];
 }
 
 export interface OrderItem {

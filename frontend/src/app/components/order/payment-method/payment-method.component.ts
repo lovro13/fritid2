@@ -9,6 +9,11 @@ import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 
+// Constants for order calculation
+export const SHIPPING_COST = 5.99; // Shipping cost constant
+export const FREE_SHIPPING_THRESHOLD = 50.00; // Free shipping threshold
+export const VAT_RATE = 0.22; // 22% VAT rate
+
 @Component({
   standalone: true,
   selector: 'app-payment-method',
@@ -22,6 +27,13 @@ export class PaymentMethodComponent implements OnInit {
 
   selectedMethod: string | null = null;
   selectedBank: string = "";
+
+  // Order summary properties
+  subtotal: number = 0;
+  shippingCost: number = SHIPPING_COST;
+  vatAmount: number = 0;
+  totalAmount: number = 0;
+  cartItems: any[] = [];
 
   banks = ['nlb', 'skb', 'abanka', 'gorenjska', 'unicredit'];
 
@@ -44,12 +56,17 @@ export class PaymentMethodComponent implements OnInit {
   }
 
   ngOnInit() {
+    // Scroll to top of the page
+    window.scrollTo(0, 0);
+    
+    // Calculate order totals
+    this.calculateOrderTotals();
+    
     // Auto-fill user data if logged in
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
       this.userService.getUserById(currentUser.id).subscribe(
         (user: any) => {
-          // Auto-fill name in card form
           this.cardForm.patchValue({
             cardHolder: `${user.firstName} ${user.lastName}`
           });
@@ -59,6 +76,35 @@ export class PaymentMethodComponent implements OnInit {
         }
       );
     }
+  }
+
+  private calculateOrderTotals() {
+    this.cartService.cartItems$.pipe(take(1)).subscribe(cartItems => {
+      this.cartItems = cartItems;
+      
+      // Calculate subtotal (price WITH VAT included)
+      this.subtotal = cartItems.reduce((sum, item) => {
+        return sum + (parseFloat(item.product.price.toString()) * item.quantity);
+      }, 0);
+
+      // Calculate shipping (free shipping above threshold)
+      this.shippingCost = this.subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+
+      // Final total (subtotal + shipping)
+      this.totalAmount = this.subtotal + this.shippingCost;
+      
+      // Update the input total as well
+      this.total = this.totalAmount;
+    });
+  }
+
+  // Template helper methods
+  calculateItemPrice(price: number, quantity: number): number {
+    return parseFloat(price.toString()) * quantity;
+  }
+
+  get vatRate(): number {
+    return VAT_RATE;
   }
 
   selectMethod(method: string) {

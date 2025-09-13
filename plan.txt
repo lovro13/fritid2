@@ -5,7 +5,6 @@ I would need to look it up
 
 
 Short term:
--- delete checkout service and handle the deltition with adding it to other serveices
 -- make more frontend models/dto
 -- delete user or user-profile service
 -- make a structure for frontend:
@@ -14,3 +13,8 @@ Component → Store (Observables/state) → API (HTTP).
 -- price on the payment method doesnt show, it would be a good idea to show some summaraziton 
 of order before the customer gets to pay
 -- make sure the user can change the number of product he will buy in the cart
+-- make option on payment-method so instaed of kartica it will be plačilo po predračuu and
+make sure that button sends it to backend and make sure the backend hadnels it properly
+
+-- PDF some day or not?
+-- send mail to miran when order is made 

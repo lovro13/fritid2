@@ -15,6 +15,21 @@
         Osebni podatki
       </h3>
       
+      <!-- Auto-fill indicator -->
+      @if (dataSource === 'recent_order') {
+        <div class="auto-fill-notice success">
+          <span class="notice-icon">✨</span>
+          <p>Podatki so samodejno izpolnjeni iz vašega zadnjega naročila</p>
+          <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
+        </div>
+      } @else if (dataSource === 'profile') {
+        <div class="auto-fill-notice info">
+          <span class="notice-icon">👤</span>
+          <p>Podatki so samodejno izpolnjeni iz vašega profila</p>
+          <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
+        </div>
+      }
+      
       <div class="form-row">
         <div class="form-group">
           <label for="firstName">

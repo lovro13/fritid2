@@ -3,7 +3,7 @@ import { ProductListComponent } from './components/product/catalog/product-list.
 import { CartComponent } from './components/product/cart/cart.component';
 import { ProductDetailComponent } from './components/product/product-detail/product-detail.component';
 import { Info } from './components/shared/info/info';
-import { CheckoutComponent } from './components/order/checkout/checkout.component';
+import { CheckoutComponent } from './components/order/shipping-info/checkout.component';
 import { PaymentMethodComponent } from './components/order/payment-method/payment-method.component';
 import { ThankYouComponent } from './components/order/thank-you/thank-you.component';
 import { AuthComponent } from './components/auth/auth.component';

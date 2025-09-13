@@ -37,6 +37,7 @@ export class CheckoutComponent {
   private cartSub!: Subscription;
   total = 0;
   cartItems: CartItem[] = [];
+  dataSource: 'none' | 'profile' | 'recent_order' = 'none';
 
   
   constructor(
@@ -65,24 +66,66 @@ export class CheckoutComponent {
     this.cartSub = this.cartService.cartItems$.subscribe(items => { this.cartItems = items })
     const currentUser = this.authService.getCurrentUser();
     if (currentUser && currentUser.id) {
-      this.userService.getUserById(currentUser.id).subscribe(
-        (user) => {
-          // Auto-fill form with user data
-          this.checkoutForm.patchValue({
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            email: user.email || '',
-            address: user.address || '',
-            postalCode: user.postalCode || '',
-            city: user.city || '',
-            phone: user.phoneNumber || ''
-          });
+      // First try to get user's most recent order for shipping info
+      this.orderService.getUserOrders(currentUser.id).subscribe(
+        (orders) => {
+          if (orders && orders.length > 0) {
+            // Get the most recent order (assuming orders are sorted by date)
+            const mostRecentOrder = orders[0];
+            console.log('Most recent order:', mostRecentOrder);
+            
+            // Auto-fill form with most recent order's shipping data
+            const formData = {
+              firstName: mostRecentOrder.shippingFirstName || '',
+              lastName: mostRecentOrder.shippingLastName || '',
+              email: mostRecentOrder.shippingEmail || '',
+              address: mostRecentOrder.shippingAddress || '',
+              postalCode: mostRecentOrder.shippingPostalCode || '',
+              city: mostRecentOrder.shippingCity || '',
+              phone: mostRecentOrder.shippingPhoneNumber || ''
+            };
+            
+            console.log('Form data to patch:', formData);
+            this.checkoutForm.patchValue(formData);
+            this.dataSource = 'recent_order';
+          } else {
+            // Fallback to user profile data if no orders found
+            this.fillFromUserProfile(currentUser.id);
+          }
         },
         (error) => {
-          console.error('Failed to fetch user details:', error);
+          console.error('Failed to fetch user orders:', error);
+          // Fallback to user profile data if orders fetch fails
+          this.fillFromUserProfile(currentUser.id);
         }
       );
     }
+  }
+
+  private fillFromUserProfile(userId: number) {
+    this.userService.getUserById(userId).subscribe(
+      (user) => {
+        // Auto-fill form with user profile data
+        this.checkoutForm.patchValue({
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          address: user.address || '',
+          postalCode: user.postalCode || '',
+          city: user.city || '',
+          phone: user.phoneNumber || ''
+        });
+        this.dataSource = 'profile';
+      },
+      (error) => {
+        console.error('Failed to fetch user details:', error);
+      }
+    );
+  }
+
+  clearForm() {
+    this.checkoutForm.reset();
+    this.dataSource = 'none';
   }
 
   onSubmit() {

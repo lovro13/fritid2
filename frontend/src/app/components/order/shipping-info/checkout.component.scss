@@ -95,6 +95,83 @@ $success-color: #27ae60;
         background-clip: text;
       }
     }
+
+    // Auto-fill notice styles
+    .auto-fill-notice {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      
+      .notice-icon {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+      
+      p {
+        margin: 0;
+        line-height: 1.4;
+        flex-grow: 1;
+      }
+      
+      .clear-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: inherit;
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: translateY(-1px);
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+      }
+      
+      &.success {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: 1px solid #c3e6cb;
+        color: #155724;
+        
+        .notice-icon {
+          animation: sparkle 2s infinite;
+        }
+        
+        .clear-btn {
+          border-color: #155724;
+          
+          &:hover {
+            background: rgba(21, 87, 36, 0.1);
+          }
+        }
+      }
+      
+      &.info {
+        background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);
+        border: 1px solid #99ccff;
+        color: #004085;
+        
+        .clear-btn {
+          border-color: #004085;
+          
+          &:hover {
+            background: rgba(0, 64, 133, 0.1);
+          }
+        }
+      }
+    }
   }
 
   // Form rows for side-by-side inputs
@@ -315,6 +392,25 @@ $success-color: #27ae60;
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.9;
+  }
+  75% {
+    transform: scale(1.1);
+    opacity: 0.8;
   }
 }
 

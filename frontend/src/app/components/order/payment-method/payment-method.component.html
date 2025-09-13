@@ -2,6 +2,40 @@
 <div class="payment-container">
   <h2>Izberite način plačila</h2>
 
+  <!-- Order Summary -->
+  <div class="order-summary">
+    <h3>Povzetek naročila</h3>
+    <div class="order-items">
+      @for (item of cartItems; track item.product.id) {
+        <div class="order-item">
+          <span class="item-name">{{ item.product.name }}</span>
+          <span class="item-quantity">x{{ item.quantity }}</span>
+          <span class="item-price">{{ calculateItemPrice(item.product.price, item.quantity) | currency:'EUR' }}</span>
+        </div>
+      }
+    </div>
+    
+    <div class="order-totals">
+      <div class="total-line">
+        <span>Medvsota (vključno z DDV):</span>
+        <span>{{ subtotal | currency:'EUR' }}</span>
+      </div>
+      <div class="total-line">
+        <span>Dostava:</span>
+        <span>{{ shippingCost === 0 ? 'Brezplačno' : (shippingCost | currency:'EUR') }}</span>
+      </div>
+      @if (subtotal >= 50) {
+        <div class="free-shipping-note">
+          <small>🎉 Brezplačna dostava za naročila nad 50,00 €</small>
+        </div>
+      }
+      <div class="total-line total-amount">
+        <span><strong>Skupaj:</strong></span>
+        <span><strong>{{ totalAmount | currency:'EUR' }}</strong></span>
+      </div>
+    </div>
+  </div>
+
   <div class="payment-options">
     <!-- Card Payment -->
     <div class="payment-option" [class.selected]="selectedMethod === 'card'" (click)="selectMethod('card')">
@@ -59,7 +93,7 @@
       </div>
 
       <button type="submit" class="pay-button" [disabled]="cardForm.invalid">
-        Plačaj {{ total | currency:'EUR' }}
+        Plačaj {{ totalAmount | currency:'EUR' }}
       </button>
     </form>
   </div>
@@ -73,7 +107,7 @@
       <i class="icon cash-large"></i>
       <h3>Plačilo po prevzetju</h3>
       <p>Pri prevzemu paketa boste plačali v gotovini.</p>
-      <p>Skupni znesek: <strong>{{ total | currency:'EUR' }}</strong></p>
+      <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
       <button class="confirm-button" (click)="confirmCashPayment()">Potrdi naročilo</button>
     </div>
   </div>
