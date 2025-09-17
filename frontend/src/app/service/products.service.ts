@@ -68,6 +68,20 @@ export class ProductsService {
     this.saveCart();
   }
 
+  updateCartItemQuantity(item: CartItem, newQuantity: number) {
+    let currentItems = this.cartItemsSubject.value;
+    const existingItem = currentItems.find(cartItem =>
+      cartItem.product.id === item.product.id &&
+      cartItem.selectedColor === item.selectedColor
+    );
+    
+    if (existingItem) {
+      existingItem.quantity = newQuantity;
+      this.cartItemsSubject.next(currentItems);
+      this.saveCart();
+    }
+  }
+
   clearCart() {
     this.cartItemsSubject.next([]);
   }

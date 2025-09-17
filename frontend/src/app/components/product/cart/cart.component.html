@@ -22,7 +22,18 @@
             <tr>
                 <td>{{item.product.name}}</td>
                 <td>{{item.selectedColor}}</td>
-                <td>{{item.quantity}}</td>
+                <td>
+                    <div class="quantity-controls">
+                        <button class="quantity-btn decrease" (click)="decreaseQuantity(item)" [disabled]="item.quantity <= 1">−</button>
+                        <input type="number" 
+                               class="quantity-input" 
+                               [(ngModel)]="item.quantity" 
+                               (change)="updateQuantity(item, $event)"
+                               min="1" 
+                               max="99">
+                        <button class="quantity-btn increase" (click)="increaseQuantity(item)">+</button>
+                    </div>
+                </td>
                 <td>{{item.product.price | number:'1.2-2'}}€</td>
                 <td>{{item.quantity * item.product.price | number:'1.2-2'}}€</td>
                 <td><button class="remove-button" (click)="removeItem(item)">✕</button></td>
