@@ -6,15 +6,15 @@
  * 2. Run: node services/glsTest.js
  */
 
-const glsService = require('./glsService');
+const glsService = require('./services/glsService');
 const fs = require('fs');
 const path = require('path');
-const logger = require('../logger');
-    
+const logger = require('./logger');
+
 
 async function testGlsLabelPrinting() {
   logger.info('🚚 Testing GLS Label Printing...');
-  
+
   try {
     // Sample parcel data
     const parcels = [{
@@ -23,7 +23,7 @@ async function testGlsLabelPrinting() {
       PickupAddress: {
         Name: 'Fritid Store',
         Street: 'Trubarjeva cesta',
-        HouseNumber: '1', 
+        HouseNumber: '1',
         City: 'Ljubljana',
         ZipCode: '1000',
         CountryIsoCode: 'SI',
@@ -32,7 +32,7 @@ async function testGlsLabelPrinting() {
       },
       DeliveryAddress: {
         Name: 'Test Customer',
-        Street: 'Glavni trg', 
+        Street: 'Glavni trg',
         HouseNumber: '5',
         City: 'Maribor',
         ZipCode: '2000',
@@ -77,12 +77,12 @@ async function testGlsLabelPrinting() {
 
 async function testOrderToParcel() {
   console.log('\n📋 Testing Order to Parcel conversion...');
-  
+
   try {
     // Sample order data (like from your checkout form)
     const orderData = {
       firstName: 'Janez',
-      lastName: 'Novak', 
+      lastName: 'Novak',
       email: 'janez.novak@example.com',
       address: 'Celovška cesta 111',
       city: 'Ljubljana',
@@ -97,7 +97,7 @@ async function testOrderToParcel() {
       Name: 'Fritid d.o.o.',
       Street: 'Trubarjeva cesta',
       HouseNumber: '1',
-      City: 'Ljubljana', 
+      City: 'Ljubljana',
       ZipCode: '1000',
       CountryIsoCode: 'SI',
       ContactPhone: '+386 1 234 5678',

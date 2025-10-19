@@ -15,12 +15,12 @@ async function buildInvoiceBodyFromOrder(order) {
   const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
   const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
   const itemId = parseInt(process.env.MINIMAX_ITEM_ID, 10);
-  
+
   logger.info("Getting customer ID for order:", order.id);
   // Temporarily use static customer ID while debugging
   const customerId = parseInt(process.env.MINIMAX_CUSTOMER_ID, 10);
   logger.info("Using static customer ID:", customerId);
-  
+
   const paymentMethodId = parseInt(process.env.MINIMAX_PAYMENT_METHOD_ID, 10);
 
   if (!orgId) throw new Error('MINIMAX_ORG_ID not set');
@@ -96,9 +96,9 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
     token = t.access_token;
     logger.info("Created new token")
   }
-  
+
   logger.info("Sending request to minimax to make invoice with body", body)
-  
+
   try {
     const result = await apiRequestToMinimax({
       method: 'POST',
@@ -130,15 +130,15 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
   }
 }
 
-async function createNewCustomer({customerId, bearerToken = null}) {
+async function createNewCustomer({ customerId, bearerToken = null }) {
   if (!customerId) throw new Error('customerId is required');
-  
+
   const orgId = process.env.MINIMAX_ORG_ID;
   if (!orgId) throw new Error('MINIMAX_ORG_ID not set');
 
   const code = "api" + customerId;
   const user = await User.findById(customerId);
-  
+
   if (!user) {
     const e = new Error('User not found');
     e.status = 404;
@@ -151,11 +151,11 @@ async function createNewCustomer({customerId, bearerToken = null}) {
   const city = user.city;
   const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
   const countryId = parseInt(process.env.MINIMAX_COUNTRY_SLOVENIA_ID, 10);
-  
+
   const body = {
     Code: code,
-    Currency: {ID: currencyId},
-    Country: {ID: countryId},
+    Currency: { ID: currencyId },
+    Country: { ID: countryId },
     Name: fullName.trim(),
     Address: address,
     PostalCode: postalCode,
@@ -210,10 +210,10 @@ async function createNewCustomer({customerId, bearerToken = null}) {
 
 async function getCustomerId(order) {
   // Gets customer id of an order or creates it
-  
+
   const orgId = process.env.MINIMAX_ORG_ID;
   const code = "api" + order.userId;
-  
+
   // Get token for API requests
   let token;
   const u = process.env.MINIMAX_USERNAME;
@@ -225,13 +225,13 @@ async function getCustomerId(order) {
   // First try to find if customer already exists in minimax system
   try {
     logger.info(`Checking if customer with code '${code}' exists in Minimax`);
-    
+
     const existingCustomer = await apiRequestToMinimax({
       method: 'GET',
       path: `orgs/${encodeURIComponent(orgId)}/customers/code(${encodeURIComponent(code)})`,
       token,
     });
-    
+
     if (existingCustomer && existingCustomer.CustomerId) {
       logger.info(`Found existing customer in Minimax with ID: ${existingCustomer.CustomerId}`);
       return existingCustomer.CustomerId;
@@ -248,10 +248,10 @@ async function getCustomerId(order) {
       customerId: order.userId,
       bearerToken: token
     });
-    
+
     logger.info(`Successfully created new customer with ID: ${newCustomer.customer.CustomerId}`);
     return newCustomer.customer.CustomerId;
-    
+
   } catch (createError) {
     logger.error('Failed to create new customer:', createError);
     throw createError;

@@ -70,11 +70,11 @@ async function getToken({ username, password }) {
     'Content-Length': Buffer.byteLength(form.toString()),
   };
   logger.info('Token request headers:', headers);
-  
+
   try {
     const res = await httpsRequest('POST', url, headers, form.toString());
     logger.info(`Token response status: ${res.status, url}`);
-    
+
     if (res.status < 200 || res.status >= 300) {
       logger.error(`Token request failed with status ${res.status}:`, res.data);
       const error = new Error(`Failed to obtain token. Status: ${res.status}`);
@@ -125,4 +125,4 @@ async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, bo
   return res.data;
 }
 
-module.exports = {httpsRequest, getToken, apiRequestToMinimax};
+module.exports = { httpsRequest, getToken, apiRequestToMinimax };
