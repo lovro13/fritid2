@@ -134,7 +134,9 @@ router.post('/', async (req, res) => {
                 orderId: result.orderId 
             });
         }
-        
+
+        // Make call here to GLS API, TODO, whole GLS API to make "prevoznica"/sticker for the package
+
         res.status(201).json(result);
     } catch (error) {
         logger.error('Checkout error:', error);

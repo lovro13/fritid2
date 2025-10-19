@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
-const helmet = require('helmet'); // Import helmet
+const helmet = require('helmet');
 const logger = require('./logger');
 
 // Load environment variables

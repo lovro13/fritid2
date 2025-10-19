@@ -14,4 +14,4 @@ Component → Store (Observables/state) → API (HTTP).
 make sure that button sends it to backend and make sure the backend hadnels it properly
 
 -- PDF some day or not?
--- send mail to miran when order is made 
+-- send mail to miran when order is made
