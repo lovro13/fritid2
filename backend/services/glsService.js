@@ -18,22 +18,34 @@ const COUNTRY_HOSTS = {
     }
 };
 
+// Create password as byte array (as per GLS C# API documentation)
+function hashPasswordToByteArray(plainPassword) {
+    const hash = crypto.createHash('sha512').update(plainPassword, 'utf8').digest();
+    return Array.from(hash); // Convert Buffer to byte array
+}
+
+// Legacy base64 method for fallback
 function hashPassword(plainPassword) {
     return crypto.createHash('sha512').update(plainPassword, 'utf8').digest('base64');
 }
 
 class GlsService {
     constructor() {
-        this.country = process.env.GLS_COUNTRY || 'SI';
-        this.env = process.env.GLS_ENV === 'prod' ? 'prod' : 'test';
+        this.country = process.env.GLS_COUNTRY;
+        this.env = process.env.GLS_ENV;
         this.baseUrl = COUNTRY_HOSTS[this.country][this.env];
 
         this.username = process.env.GLS_USERNAME;
         this.password = process.env.GLS_PASSWORD_PLAIN;
-        this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE || 'Fritid';
+        this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE;
+        this.clientNumber = parseInt(process.env.GLS_CLIENT_NUMBER_TEST);
 
         if (!this.username || !this.password) {
             throw new Error('GLS_USERNAME and GLS_PASSWORD_PLAIN are required in environment variables');
+        }
+        
+        if (!this.clientNumber) {
+            logger.warn('GLS_CLIENT_NUMBER not set - you need to get this from GLS support');
         }
     }
 
@@ -70,32 +82,51 @@ class GlsService {
      * }]);
      */
     async printLabels(parcels) {
-        const payload = {
+        if (!this.clientNumber) {
+            throw new Error('GLS_CLIENT_NUMBER is required. Please contact GLS to get your client number.');
+        }
+
+        // Create request matching GLS C# API structure
+        const requestData = {
+            // APIRequestBase properties
+            ClientNumberList: [this.clientNumber],
+            Password: hashPasswordToByteArray(this.password),
             Username: this.username,
-            Password: hashPassword(this.password),
             WebshopEngine: this.webshopEngine,
+            
+            // PrintLabelsRequest properties
             ParcelList: parcels.map(parcel => ({
                 ...parcel,
+                ClientNumber: this.clientNumber,
+                ClientReference: parcel.ClientReference || `FRITID-${Date.now()}`,
                 Count: parcel.Count || 1
             })),
+            TypeOfPrinter: process.env.GLS_DEFAULT_PRINTER,
             ShowPrintDialog: false
         };
 
         try {
-            logger.info('Sending PrintLabels request to GLS API', { parcelCount: parcels.length });
-            const response = await fetch(`${this.baseUrl}/json/PrintLabels`, {
+            logger.info('Sending PrintLabels request to GLS API', { 
+                parcelCount: parcels.length, 
+                baseUrl: this.baseUrl,
+                environment: this.env,
+                clientNumber: this.clientNumber,
+                payloadKeys: Object.keys(requestData)
+            });
+            
+            const response = await fetch(`${this.baseUrl}/ParcelService.svc/json/PrintLabels`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(requestData)
             });
-
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-
+            
             const data = await response.json();
+            logger.info('Received response from GLS API for PrintLabels', data);
 
             const result = {
                 parcelNumbers: [],
@@ -121,7 +152,11 @@ class GlsService {
 
             return result;
         } catch (error) {
-            console.error('GLS API call failed:', error);
+            logger.error('GLS API call failed', {
+                error: error.message,
+                baseUrl: this.baseUrl,
+                parcelCount: parcels.length
+            });
             throw new Error(`GLS API call failed: ${error.message}`);
         }
     }
