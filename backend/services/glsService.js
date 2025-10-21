@@ -18,13 +18,6 @@ const COUNTRY_HOSTS = {
     }
 };
 
-// Create password as byte array (as per GLS C# API documentation)
-function hashPasswordToByteArray(plainPassword) {
-    const hash = crypto.createHash('sha512').update(plainPassword, 'utf8').digest();
-    return Array.from(hash); // Convert Buffer to byte array
-}
-
-// Legacy base64 method for fallback
 function hashPassword(plainPassword) {
     return crypto.createHash('sha512').update(plainPassword, 'utf8').digest('base64');
 }
@@ -38,14 +31,9 @@ class GlsService {
         this.username = process.env.GLS_USERNAME;
         this.password = process.env.GLS_PASSWORD_PLAIN;
         this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE;
-        this.clientNumber = parseInt(process.env.GLS_CLIENT_NUMBER_TEST);
 
         if (!this.username || !this.password) {
             throw new Error('GLS_USERNAME and GLS_PASSWORD_PLAIN are required in environment variables');
-        }
-        
-        if (!this.clientNumber) {
-            logger.warn('GLS_CLIENT_NUMBER not set - you need to get this from GLS support');
         }
     }
 
@@ -82,23 +70,12 @@ class GlsService {
      * }]);
      */
     async printLabels(parcels) {
-        if (!this.clientNumber) {
-            throw new Error('GLS_CLIENT_NUMBER is required. Please contact GLS to get your client number.');
-        }
-
-        // Create request matching GLS C# API structure
-        const requestData = {
-            // APIRequestBase properties
-            ClientNumberList: [this.clientNumber],
-            Password: hashPasswordToByteArray(this.password),
+        const payload = {
             Username: this.username,
+            Password: hashPassword(this.password),
             WebshopEngine: this.webshopEngine,
-            
-            // PrintLabelsRequest properties
             ParcelList: parcels.map(parcel => ({
                 ...parcel,
-                ClientNumber: this.clientNumber,
-                ClientReference: parcel.ClientReference || `FRITID-${Date.now()}`,
                 Count: parcel.Count || 1
             })),
             TypeOfPrinter: process.env.GLS_DEFAULT_PRINTER,
@@ -110,16 +87,15 @@ class GlsService {
                 parcelCount: parcels.length, 
                 baseUrl: this.baseUrl,
                 environment: this.env,
-                clientNumber: this.clientNumber,
-                payloadKeys: Object.keys(requestData)
+                payloadKeys: Object.keys(payload)
             });
             
-            const response = await fetch(`${this.baseUrl}/ParcelService.svc/json/PrintLabels`, {
+            const response = await fetch(`${this.baseUrl}/json/PrintLabels`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(payload)
             });
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
