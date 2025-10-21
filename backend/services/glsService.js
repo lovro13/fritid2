@@ -1,174 +1,228 @@
-const crypto = require('crypto');
 const dotenv = require('dotenv');
-const logger = require('../logger');
+const fs = require('fs');
+const path = require('path');
 
-
-/**
- * Minimal GLS service for printing shipping labels
- */
-// Load environment variables
 const envPath = process.env.ENV_PATH;
 dotenv.config({ path: envPath });
-logger.info(`Loading environment from: ${envPath}`);
 
-const COUNTRY_HOSTS = {
-    SI: {
-        prod: 'https://api.mygls.si/ParcelService.svc',
-        test: 'https://api.test.mygls.si/ParcelService.svc'
-    }
-};
+const BASE = 'https://api.mygls.si/ParcelService.svc';
 
-function hashPassword(plainPassword) {
-    return crypto.createHash('sha512').update(plainPassword, 'utf8').digest('base64');
+const crypto = require('crypto');
+
+// SHA-512 as byte array (required by GLS API)
+function sha512Bytes(input) {
+    return Array.from(crypto.createHash('sha512').update(input, 'utf8').digest());
+}
+
+// Convert Date to WCF JSON format: /Date(milliseconds)/
+function toWcfDate(date) {
+    return `/Date(${date.getTime()})/`;
 }
 
 class GlsService {
     constructor() {
-        this.country = process.env.GLS_COUNTRY;
-        this.env = process.env.GLS_ENV;
-        this.baseUrl = COUNTRY_HOSTS[this.country][this.env];
-
         this.username = process.env.GLS_USERNAME;
-        this.password = process.env.GLS_PASSWORD_PLAIN;
-        this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE;
+        this.password = process.env.GLS_PASSWORD;
+        this.clientNumber = Number(process.env.GLS_CLIENT_ID);
+        this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE || 'Fritid';
+        // Use A4 format for viewable PDF (available options: A4_2x2, A4_4x1, Connect, Thermo, ThermoZPL)
+        this.typeOfPrinter = 'A4_4x1'; // Force A4 PDF format
+        this.baseUrl = BASE;
 
-        if (!this.username || !this.password) {
-            throw new Error('GLS_USERNAME and GLS_PASSWORD_PLAIN are required in environment variables');
+        if (!this.username || !this.password || !this.clientNumber) {
+            throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
         }
     }
 
     /**
-     * Print shipping labels for parcels
+     * Generate shipping label PDF for a parcel
      * 
-     * @param {Array} parcels - Array of parcel objects
-     * @param {Object} parcels[].PickupAddress - Pickup address
-     * @param {Object} parcels[].DeliveryAddress - Delivery address  
-     * @param {string} parcels[].Content - Package content description
-     * @param {number} [parcels[].Count=1] - Number of packages
+     * @param {Object} parcel - Parcel data
+     * @param {string} parcel.ClientReference - Your order/tracking reference
+     * @param {string} parcel.Content - Package content description
+     * @param {number} [parcel.Count=1] - Number of parcels
+     * @param {Object} parcel.PickupAddress - Sender address (your warehouse)
+     * @param {Object} parcel.DeliveryAddress - Customer delivery address
+     * @param {number} [parcel.CODAmount] - Cash on delivery amount (optional)
+     * @param {string} [parcel.CODCurrency='EUR'] - COD currency (optional)
+     * @param {Date} [parcel.PickupDate] - Pickup date (optional, defaults to today)
      * 
-     * @returns {Promise<Object>} Result with pdfBuffer, parcelNumbers, and errors
+     * @returns {Promise<Object>} Result with pdfBuffer, parcelNumber, parcelId, and errors
      * 
      * @example
-     * const result = await glsService.printLabels([{
+     * const result = await glsService.printLabel({
+     *   ClientReference: 'ORDER-12345',
      *   Content: 'Electronics',
+     *   Count: 1,
      *   PickupAddress: {
-     *     Name: 'Fritid Store',
-     *     Street: 'Trubarjeva cesta',
-     *     HouseNumber: '1',
-     *     City: 'Ljubljana',
-     *     ZipCode: '1000',
-     *     CountryIsoCode: 'SI'
+     *     Name: 'FRITID d.o.o.',
+     *     Street: 'Ljubljanska cesta',
+     *     HouseNumber: '45',
+     *     City: 'KAMNIK',
+     *     ZipCode: '1241',
+     *     CountryIsoCode: 'SI',
+     *     ContactPhone: '+386 1 234 5678',
+     *     ContactEmail: 'info@fritid.si'
      *   },
      *   DeliveryAddress: {
-     *     Name: 'Customer Name',
-     *     Street: 'Glavni trg',
-     *     HouseNumber: '5',
-     *     City: 'Maribor',
-     *     ZipCode: '2000', 
-     *     CountryIsoCode: 'SI'
-     *   }
-     * }]);
+     *     Name: 'Janez Novak',
+     *     Street: 'Celovška cesta',
+     *     HouseNumber: '111',
+     *     City: 'Ljubljana',
+     *     ZipCode: '1000',
+     *     CountryIsoCode: 'SI',
+     *     ContactPhone: '+386 41 123 456',
+     *     ContactEmail: 'customer@example.com'
+     *   },
+     *   CODAmount: 99.99,
+     *   CODCurrency: 'EUR'
+     * });
      */
-    async printLabels(parcels) {
-        const payload = {
+    async printLabel(parcel) {
+        // Build the parcel data with required fields
+        const parcelData = {
+            ClientNumber: this.clientNumber,
+            ClientReference: parcel.ClientReference || `GLS-${Date.now()}`,
+            Content: parcel.Content || 'Package',
+            Count: parcel.Count || 1,
+            PickupAddress: parcel.PickupAddress,
+            DeliveryAddress: parcel.DeliveryAddress,
+            PickupDate: parcel.PickupDate ? toWcfDate(parcel.PickupDate) : toWcfDate(new Date())
+        };
+
+        // Add COD (Cash on Delivery) if specified
+        if (parcel.CODAmount && parcel.CODAmount > 0) {
+            parcelData.CODAmount = parcel.CODAmount;
+            parcelData.CODCurrency = parcel.CODCurrency || 'EUR';
+            parcelData.CODReference = parcel.ClientReference;
+            parcelData.ServiceList = [{
+                Code: 'COD'
+            }];
+        }
+
+        // Build PrintLabels request
+        const request = {
             Username: this.username,
-            Password: hashPassword(this.password),
+            Password: sha512Bytes(this.password),
+            ClientNumberList: [this.clientNumber],
             WebshopEngine: this.webshopEngine,
-            ParcelList: parcels.map(parcel => ({
-                ...parcel,
-                Count: parcel.Count || 1
-            })),
-            TypeOfPrinter: process.env.GLS_DEFAULT_PRINTER,
-            ShowPrintDialog: false
+            ParcelList: [parcelData],
+            TypeOfPrinter: this.typeOfPrinter,
+            ShowPrintDialog: false,
+            PrintPosition: 1
         };
 
         try {
-            logger.info('Sending PrintLabels request to GLS API', { 
-                parcelCount: parcels.length, 
-                baseUrl: this.baseUrl,
-                environment: this.env,
-                payloadKeys: Object.keys(payload)
-            });
-            
-            const response = await fetch(`${this.baseUrl}/json/PrintLabels`, {
+            const url = `${this.baseUrl}/json/PrintLabels`;
+            const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request)
             });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            logger.info('Received response from GLS API for PrintLabels', data);
 
-            const result = {
-                parcelNumbers: [],
+            const data = await response.json();
+
+            // Check for errors
+            if (data.PrintLabelsErrorList && data.PrintLabelsErrorList.length > 0) {
+                return {
+                    success: false,
+                    errors: data.PrintLabelsErrorList.map(err => ({
+                        code: err.ErrorCode,
+                        description: err.ErrorDescription
+                    }))
+                };
+            }
+
+            // Extract label info
+            const labelInfo = data.PrintLabelsInfoList && data.PrintLabelsInfoList[0];
+            const pdfBuffer = data.Labels ? Buffer.from(data.Labels, 'base64') : null;
+
+            return {
+                success: true,
+                pdfBuffer: pdfBuffer,
+                parcelId: labelInfo?.ParcelId,
+                parcelNumber: labelInfo?.ParcelNumber,
+                clientReference: labelInfo?.ClientReference,
                 errors: []
             };
 
-            // Extract PDF if available
-            if (data.Labels) {
-                result.pdfBuffer = Buffer.from(data.Labels, 'base64');
-            }
-
-            // Extract parcel numbers
-            if (data.PrintLabelsInfoList) {
-                result.parcelNumbers = data.PrintLabelsInfoList.map(info => info.ParcelNumber);
-            }
-
-            // Extract errors
-            if (data.PrintLabelsErrorList) {
-                result.errors = data.PrintLabelsErrorList.map(error =>
-                    `${error.ErrorCode}: ${error.ErrorDescription}`
-                );
-            }
-
-            return result;
         } catch (error) {
-            logger.error('GLS API call failed', {
-                error: error.message,
-                baseUrl: this.baseUrl,
-                parcelCount: parcels.length
-            });
-            throw new Error(`GLS API call failed: ${error.message}`);
+            return {
+                success: false,
+                errors: [{
+                    code: 'API_ERROR',
+                    description: error.message
+                }]
+            };
         }
     }
 
     /**
-     * Create a simple parcel object from order data
+     * Save label PDF to file
      * 
-     * @param {Object} orderData - Order information
-     * @param {Object} senderAddress - Pickup address (your store)
-     * @returns {Object} Parcel object ready for GLS API
+     * @param {Buffer} pdfBuffer - PDF buffer from printLabel
+     * @param {string} filename - Output filename
+     * @returns {string} Full path to saved file
      */
-    createParcelFromOrder(orderData, senderAddress) {
-        return {
-            Content: orderData.content || 'General merchandise',
-            Count: orderData.count || 1,
-            PickupAddress: {
-                Name: senderAddress.Name || 'Fritid Store',
-                Street: senderAddress.Street || 'Store Street',
-                HouseNumber: senderAddress.HouseNumber || '1',
-                City: senderAddress.City || 'Ljubljana',
-                ZipCode: senderAddress.ZipCode || '1000',
-                CountryIsoCode: senderAddress.CountryIsoCode || 'SI',
-                ContactPhone: senderAddress.ContactPhone,
-                ContactEmail: senderAddress.ContactEmail
-            },
-            DeliveryAddress: {
-                Name: `${orderData.firstName} ${orderData.lastName}`.trim(),
-                Street: orderData.address,
-                HouseNumber: orderData.houseNumber || '1',
-                City: orderData.city,
-                ZipCode: orderData.postalCode,
-                CountryIsoCode: orderData.countryCode || 'SI',
-                ContactPhone: orderData.phoneNumber,
-                ContactEmail: orderData.email
-            }
+    saveLabelToFile(pdfBuffer, filename = 'gls-label.pdf') {
+        const outputPath = path.join(__dirname, '..', 'uploads', filename);
+        
+        // Ensure directory exists
+        const dir = path.dirname(outputPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+
+        fs.writeFileSync(outputPath, pdfBuffer);
+        return outputPath;
+    }
+
+    async getParcelList(fromDate, toDate) {
+        const request = {
+            Username: this.username,
+            Password: sha512Bytes(this.password),
+            ClientNumberList: [this.clientNumber],
+            PickupDateFrom: toWcfDate(fromDate),
+            PickupDateTo: toWcfDate(toDate),
+            PrintDateFrom: null,
+            PrintDateTo: null
         };
+
+        try {
+            const url = `${this.baseUrl}/json/GetParcelList`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(request)
+            });
+
+            const data = await response.json();
+
+            if (data.GetParcelListErrors && data.GetParcelListErrors.length > 0) {
+                return {
+                    success: false,
+                    errors: data.GetParcelListErrors.map(err => ({
+                        code: err.ErrorCode,
+                        description: err.ErrorDescription
+                    }))
+                };
+            }
+
+            return {
+                success: true,
+                parcels: data.PrintDataInfoList || [],
+                errors: []
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                errors: [{
+                    code: 'API_ERROR',
+                    description: error.message
+                }]
+            };
+        }
     }
 }
 
