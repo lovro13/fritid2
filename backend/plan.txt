@@ -1,0 +1,17 @@
+Plan:
+-- gls api
+-- maybe make products coordinated with my database and the minimax, if this doesnt work alredy,
+I would need to look it up
+
+
+Short term:
+-- make more frontend models/dto ?? 
+-- make a structure for frontend:
+Component → Store (Observables/state) → API (HTTP).
+
+
+-- make option on payment-method so instaed of kartica it will be plačilo po predračuu and
+make sure that button sends it to backend and make sure the backend hadnels it properly
+
+-- PDF some day or not?
+-- send mail to miran when order is made
