@@ -36,7 +36,6 @@ router.get('/price-range', async (req, res) => {
 
 // Get all products
 router.get('/', async (req, res) => {
-    console.log("trying to get products")
     try {
         const products = await Product.findAll();
         return res.json(products);

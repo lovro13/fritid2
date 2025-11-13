@@ -5,6 +5,8 @@ const User = require('../models/User');
 const { apiRequestToMinimax, getCustomerId } = require('./minimaxService');
 const { getToken } = require('./httpRequestsService')
 const logger = require('../logger');
+const fs = require('fs');
+const path = require('path');
 
 async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId }) {
 
@@ -15,7 +17,6 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
         }, 0);
 
         // Create order
-        logger.info("Do i have userid", userId);
         const order = await Order.create({
             optUserId: userId,
             totalAmount: totalAmount.toFixed(2),
@@ -74,12 +75,6 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
         // Always create the invoice after order creation using our own backend endpoint
         logger.info("Creating minimax invoice")
         try {
-
-
-            // Call our own backend endpoint to create invoice
-            const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-            const backendUrl = process.env.FULL_BACKEND_URL;
-            const baseUrl = `${protocol}://${backendUrl}`;
             const orgId = process.env.MINIMAX_ORG_ID;
 
             let token = null;
@@ -93,18 +88,13 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             if (!token) {
                 throw new Error('Failed to get Minimax API token');
             }
-            logger.info("Got minimax token", token)
+            logger.info("Got minimax token")
 
             // Get order with user information using models
             const orderData = await Order.findById(order.id);
+            logger.info("Got order data from database for minimax invoice: ", orderData);
             if (!orderData) {
                 throw new Error('Order not found');
-            }
-
-            // Get user information if order has a userId
-            let user = null;
-            if (orderData.userId) {
-                user = await User.findById(orderData.userId);
             }
 
             // Get order items with product information using models
@@ -154,6 +144,7 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             });
 
             // Get the customer ID (this is async)
+            logger.info('Getting customer ID for invoice with orderdata', orderData);
             const customerId = await getCustomerId(orderData);
             logger.info('Using customer ID for invoice:', customerId);
 
@@ -180,43 +171,73 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             };
 
 
-            logger.info('Creating Minimax invoice with payload');
+            logger.info('Creating Minimax invoice');
 
             // Create invoice via Minimax API
-            const invoiceResponse = await apiRequestToMinimax({
+            const [invoiceResponse, headers] = await apiRequestToMinimax({
                 method: 'POST',
                 path: `orgs/${orgId}/issuedinvoices`,
                 token,
                 body: invoicePayload
             });
 
-            logger.info('Invoice created successfully:', invoiceResponse);
+            // Extract invoice path from location header
+            const locationHeader = headers?.location || '';
+            const invoicePathMatch = locationHeader.match(/\/SI\/API\/api\/(orgs\/\d+\/issuedinvoices\/\d+)/);
+            const invoicePath = invoicePathMatch[1];
+            logger.info('Extracted invoice path from location header:', invoicePath);
 
+            logger.info(`Invoice created successfully: data: ${JSON.stringify(invoiceResponse)}, 
+            headers: ${JSON.stringify(headers)}`);
+            logger.info("Checking if inovice exists")
+            const [checkInvoiceResponse, checkHeaders] = await apiRequestToMinimax({
+                method: 'GET',
+                path: invoicePath,
+                token
+            });
             if (process.env.MINIMAX_AUTO_ISSUE_PDF === 'true') {
                 try {
-                    const issuedInvoiceId = invoiceResponse.IssuedInvoiceId;
-                    const rowVersion = invoiceResponse.RowVersion;
+                    // Get the rowVersion from the invoice check response
+                    const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
+                    logger.info("got row version for pdf generation:", rowVersion);
+                    const [pdfResponse, pdfHeaders] = await apiRequestToMinimax({
+                        method: 'PUT',
+                        path: invoicePath + `/actions/issueAndGeneratepdf?rowVersion=${rowVersion}`,
+                        token,
+                        body: {}
+                    });
+                    logger.info(`PDF generated successfully for invoice;`);
+                    logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
 
-                    if (issuedInvoiceId && rowVersion) {
-                        const pdfResponse = await apiRequestToMinimax({
-                            method: 'PUT',
-                            path: `orgs/${orgId}/issuedinvoices/${issuedInvoiceId}/actions/IssueAndGeneratePdf`,
-                            token,
-                            body: {},
-                            query: { rowVersion }
-                        });
-
-                        logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
-
-                        return {
-                            success: true,
-                            orderId: order.id,
-                            invoice: invoiceResponse,
-                            pdf: pdfResponse.Data
-                        };
+                    // Save PDF to uploads/invoices directory
+                    let savedFilePath = null;
+                    if (pdfResponse.Data?.AttachmentData) {
+                        const invoiceId = invoicePath.split('/').pop(); // Extract invoice ID from path
+                        const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
+                        const uploadsDir = path.join(__dirname, '../uploads/invoices');
+                        savedFilePath = path.join(uploadsDir, fileName);
+                        
+                        // Ensure directory exists
+                        if (!fs.existsSync(uploadsDir)) {
+                            fs.mkdirSync(uploadsDir, { recursive: true });
+                        }
+                        
+                        // Convert base64 content to buffer and save
+                        const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
+                        fs.writeFileSync(savedFilePath, pdfBuffer);
+                        
+                        logger.info(`PDF saved to: ${savedFilePath}`);
                     } else {
-                        logger.warn('Missing IssuedInvoiceId or RowVersion for PDF generation');
+                        logger.warn('No AttachmentData found in PDF response:', pdfResponse.Data);
                     }
+
+                    return {
+                        success: true,
+                        orderId: order.id,
+                        invoice: invoiceResponse,
+                        pdf: pdfResponse.Data,
+                        pdfPath: savedFilePath
+                    };
                 } catch (pdfError) {
                     logger.error('Failed to generate PDF:', pdfError);
                     // Return invoice without PDF - don't fail the whole operation

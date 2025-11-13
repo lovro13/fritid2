@@ -4,7 +4,7 @@ const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
-const { createInvoiceForOrder, getToken, apiRequestToMinimax } = require('../services/minimaxService');
+const { createInvoiceForOrder } = require('../services/minimaxService');
 const { create_order_and_send_issue_to_mmax } = require('../services/orderService');
 const logger = require('../logger');
 
@@ -181,17 +181,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-// Create a Minimax invoice for an existing order
-router.post('/:id/invoice', async (req, res) => {
-    try {
-        const auth = req.headers['authorization'] || req.headers['Authorization'];
-        const bearer = auth && /^Bearer\s+(.+)$/i.test(auth) ? auth.split(/\s+/)[1] : null;
-        const { id } = req.params;
-        const result = await createInvoiceForOrder({ orderId: id, bearerToken: bearer });
-        res.status(201).json(result);
-    } catch (err) {
-        const status = err.status || err?.response?.status || 500;
-        res.status(status).json({ error: err.message, details: err?.response?.data || null });
-    }
-});

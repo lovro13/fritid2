@@ -1,15 +1,15 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-
+const logger = require('../logger');
 const router = express.Router();
 
 // Register
 router.post('/register', async (req, res) => {
     try {
         const { firstName, lastName, email, password } = req.body;
-
-        // Check if user already exists
+        logger.info(`Attempting to register user with email: ${email}, firstName: ${firstName}, lastName: ${lastName}`);
+        // Check if user already exists`
         const existingUser = await User.findByEmail(email);
         if (existingUser && existingUser.passwordHash != null) {
             return res.status(400).json({ error: 'User with this email already exists' });
@@ -30,8 +30,6 @@ router.post('/register', async (req, res) => {
                 token
             });
         } else {
-
-            
             // Create new user
             const user = await User.create({ firstName, lastName, email, password });
             

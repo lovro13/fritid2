@@ -119,10 +119,12 @@ async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, bo
   // Bubble up non-2xx as errors to the router to map status codes
   if (res.status < 200 || res.status >= 300) {
     const error = new Error('Minimax API request failed', res);
+    logger.info(`Minimax API ${method} ${path} failed with status ${res.status}:`, res.data);
     error.response = res;
     throw error;
   }
-  return res.data;
+  // logger.info(`Minimax API ${method} ${path} response: ${JSON.stringify(res)}`);
+  return [res.data, res.headers];
 }
 
 module.exports = { httpsRequest, getToken, apiRequestToMinimax };

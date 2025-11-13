@@ -100,7 +100,7 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
   logger.info("Sending request to minimax to make invoice with body", body)
 
   try {
-    const result = await apiRequestToMinimax({
+    const [result, _] = await apiRequestToMinimax({
       method: 'POST',
       path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
       token,
@@ -116,7 +116,7 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
       const p = process.env.MINIMAX_PASSWORD;
       if (u && p) {
         const t = await getToken({ username: u, password: p });
-        const result = await apiRequestToMinimax({
+        const [result, _] = await apiRequestToMinimax({
           method: 'POST',
           path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
           token: t.access_token,
@@ -178,41 +178,27 @@ async function createNewCustomer({ customerId, bearerToken = null }) {
   logger.info("Sending request to minimax to create customer with body", body);
 
   try {
-    const result = await apiRequestToMinimax({
+    const [result, _] = await apiRequestToMinimax({
       method: 'POST',
       path: `orgs/${encodeURIComponent(orgId)}/customers`,
       token,
       body,
     });
     logger.info("Successfully created customer in minimax");
+    logger.info("returning user id and customer info", user.id, result);
     return { customerId: user.id, customer: result };
   } catch (error) {
-    // If token is invalid and we used bearerToken, try with fresh env token
-    if (error?.response?.status === 401 && bearerToken) {
-      logger.info("Bearer token invalid, trying with fresh env token for customer creation");
-      const u = process.env.MINIMAX_USERNAME;
-      const p = process.env.MINIMAX_PASSWORD;
-      if (u && p) {
-        const t = await getToken({ username: u, password: p });
-        const result = await apiRequestToMinimax({
-          method: 'POST',
-          path: `orgs/${encodeURIComponent(orgId)}/customers`,
-          token: t.access_token,
-          body,
-        });
-        logger.info("Successfully created customer in minimax with fresh token");
-        return { customerId: user.id, customer: result };
-      }
-    }
     throw error;
   }
 }
 
 async function getCustomerId(order) {
   // Gets customer id of an order or creates it
+  logger.info('getCustomerId called with order.userId:', order.userId);
+  logger.info('Order object keys:', Object.keys(order));
 
   const orgId = process.env.MINIMAX_ORG_ID;
-  const code = "api" + order.userId;
+  let code = "api" + order.userId;
 
   // Get token for API requests
   let token;
@@ -226,7 +212,7 @@ async function getCustomerId(order) {
   try {
     logger.info(`Checking if customer with code '${code}' exists in Minimax`);
 
-    const existingCustomer = await apiRequestToMinimax({
+    const [existingCustomer, _] = await apiRequestToMinimax({
       method: 'GET',
       path: `orgs/${encodeURIComponent(orgId)}/customers/code(${encodeURIComponent(code)})`,
       token,
@@ -244,14 +230,19 @@ async function getCustomerId(order) {
   // If customer doesn't exist, create new customer
   try {
     logger.info(`Creating new customer in Minimax for user ID: ${order.userId}`);
-    const newCustomer = await createNewCustomer({
+    const res = await createNewCustomer({
       customerId: order.userId,
       bearerToken: token
     });
-
-    logger.info(`Successfully created new customer with ID: ${newCustomer.customer.CustomerId}`);
-    return newCustomer.customer.CustomerId;
-
+    logger.info("Created new customer in Minimax");
+    const [newCustomer, headers] = await apiRequestToMinimax({
+      method: 'GET',
+      path: `orgs/${encodeURIComponent(orgId)}/customers/code(${encodeURIComponent(code)})`,
+      token,
+    });
+    logger.info(`Successfully created new customer with ID: ${newCustomer.CustomerId}`);
+    return newCustomer.CustomerId;
+    
   } catch (createError) {
     logger.error('Failed to create new customer:', createError);
     throw createError;

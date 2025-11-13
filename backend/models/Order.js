@@ -1,5 +1,7 @@
 const { getPool } = require('./dbModel');
 const User = require('../models/User')
+const logger = require('../logger');
+const { log } = require('winston');
 
 class Order {
     constructor(orderData) {
@@ -38,6 +40,9 @@ class Order {
     static async findById(id) {
         const pool = getPool();
         const [rows] = await pool.execute('SELECT * FROM orders WHERE id = ?', [id]);
+        logger.info("Finding order by ID:", id);
+        logger.info("Database returned rows:", rows);
+        logger.info("Making order from row:", rows[0]);
         return rows.length > 0 ? new Order(rows[0]) : null;
     }
 
