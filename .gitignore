@@ -6,6 +6,7 @@
 /out-tsc
 /bazel-out
 
+backend/uploads/invoices/
 
 backend/logs
 backend/logs/

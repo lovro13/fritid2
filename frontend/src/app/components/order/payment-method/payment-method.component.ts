@@ -11,7 +11,6 @@ import { environment } from '../../../../environments/environment';
 
 // Constants for order calculation
 export const SHIPPING_COST = 5.99; // Shipping cost constant
-export const FREE_SHIPPING_THRESHOLD = 50.00; // Free shipping threshold
 export const VAT_RATE = 0.22; // 22% VAT rate
 
 @Component({
@@ -35,24 +34,12 @@ export class PaymentMethodComponent implements OnInit {
   totalAmount: number = 0;
   cartItems: any[] = [];
 
-  banks = ['nlb', 'skb', 'abanka', 'gorenjska', 'unicredit'];
-
-  cardForm: FormGroup;
 
   constructor(private fb: FormBuilder,
     private cartService: ProductsService,
-    private authService: UserService,
-    private userService: UserService,
     private orderService: OrderService,
     private http: HttpClient,
     private router: Router) {
-    this.cardForm = this.fb.group({
-      cardNumber: ['', [Validators.required, Validators.pattern('^[0-9 ]{16,19}$')]],
-      expiryDate: ['', [Validators.required, Validators.pattern('^(0[1-9]|1[0-2])\\/?([0-9]{2})$')]],
-      cvv: ['', [Validators.required, Validators.pattern('^[0-9]{3,4}$')]],
-      cardHolder: ['', [Validators.required, Validators.minLength(2)]],
-
-    });
   }
 
   ngOnInit() {
@@ -63,19 +50,6 @@ export class PaymentMethodComponent implements OnInit {
     this.calculateOrderTotals();
     
     // Auto-fill user data if logged in
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser && currentUser.id) {
-      this.userService.getUserById(currentUser.id).subscribe(
-        (user: any) => {
-          this.cardForm.patchValue({
-            cardHolder: `${user.firstName} ${user.lastName}`
-          });
-        },
-        (error: any) => {
-          console.error('Failed to fetch user details:', error);
-        }
-      );
-    }
   }
 
   private calculateOrderTotals() {
@@ -88,7 +62,7 @@ export class PaymentMethodComponent implements OnInit {
       }, 0);
 
       // Calculate shipping (free shipping above threshold)
-      this.shippingCost = this.subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST;
+      this.shippingCost = SHIPPING_COST;
 
       // Final total (subtotal + shipping)
       this.totalAmount = this.subtotal + this.shippingCost;
@@ -109,60 +83,16 @@ export class PaymentMethodComponent implements OnInit {
 
   selectMethod(method: string) {
     this.selectedMethod = method;
-    this.selectedBank = "";
   }
 
-  selectBank(bank: string) {
-    this.selectedBank = bank;
-  }
 
-  getBankName(bankCode: string): string {
-    const bankNames: { [key: string]: string } = {
-      'nlb': 'NLB',
-      'skb': 'SKB Banka',
-      'abanka': 'A Banka',
-      'gorenjska': 'Banka Gorenjska',
-      'unicredit': 'UniCredit Banka'
-    };
-    return bankNames[bankCode] || bankCode;
-  }
-
-  processPayment() {
-    if (this.cardForm.valid) {
-      console.log('Processing card payment', this.cardForm.value);
-      this.paymentComplete.emit('card');
-
-      // Submit checkout data to backend
-      combineLatest([
-        this.orderService.personInfo$,
-        this.cartService.cartItems$
-      ])
-        .pipe(take(1))
-        .subscribe(([personInfo, cartItems]) => {
-          const currentUser = this.authService.getCurrentUser();
-          const payload = {
-            personInfo,
-            cartItems,
-            userId: currentUser?.id || null  // Include userId if logged in
-          };
-          console.log('Checkout payload:', payload);
-          this.http.post( `${environment.apiBase}/order`, payload).subscribe({
-            next: (response) => {
-              console.log('Checkout success', response);
-              this.router.navigate(['/thank-you']);
-            },
-            error: (err) => {
-              console.error('Checkout failed', err);
-            }
-          });
-        });
+  confirmPayment() {
+      console.log('Payment confirmed');
+      if (this.selectedMethod == 'cash')  {
+        this.paymentComplete.emit('cash');
+      } else {
+        this.paymentComplete.emit('upn');
       }
-    }
-    
-    confirmCashPayment() {
-      console.log('Cash payment confirmed');
-      this.paymentComplete.emit('cash');
-      // Use observables to get the latest values
       
       combineLatest([
         this.orderService.personInfo$,
@@ -170,11 +100,10 @@ export class PaymentMethodComponent implements OnInit {
       ])
       .pipe(take(1))
       .subscribe(([personInfo, cartItems]) => {
-        const currentUser = this.authService.getCurrentUser();
         const payload = {
           personInfo,
           cartItems,
-          userId: currentUser?.id || null  // Include userId if logged in
+          typeOfOrder: this.selectedMethod
         };
         
         console.log('Checkout payload:', payload);
@@ -191,10 +120,4 @@ export class PaymentMethodComponent implements OnInit {
       });
   }
 
-  processBankPayment() {
-    if (this.selectedBank) {
-      console.log('Processing bank payment with', this.selectedBank);
-      this.paymentComplete.emit('bank');
-    }
-  }
 }

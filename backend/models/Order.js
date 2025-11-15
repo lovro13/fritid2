@@ -17,6 +17,7 @@ class Order {
         this.shippingCity = orderData.shipping_city;
         this.shippingPhoneNumber = orderData.shipping_phone_number;
         this.createdAt = orderData.created_at;
+        this.type = orderData.type;
         this.orderItems = [];
     }
 

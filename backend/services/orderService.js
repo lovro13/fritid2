@@ -195,53 +195,51 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
                 path: invoicePath,
                 token
             });
-            if (process.env.MINIMAX_AUTO_ISSUE_PDF === 'true') {
-                try {
-                    // Get the rowVersion from the invoice check response
-                    const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
-                    logger.info("got row version for pdf generation:", rowVersion);
-                    const [pdfResponse, pdfHeaders] = await apiRequestToMinimax({
-                        method: 'PUT',
-                        path: invoicePath + `/actions/issueAndGeneratepdf?rowVersion=${rowVersion}`,
-                        token,
-                        body: {}
-                    });
-                    logger.info(`PDF generated successfully for invoice;`);
-                    logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
+            try {
+                // Get the rowVersion from the invoice check response
+                const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
+                logger.info("got row version for pdf generation:", rowVersion);
+                const [pdfResponse, pdfHeaders] = await apiRequestToMinimax({
+                    method: 'PUT',
+                    path: invoicePath + `/actions/issueAndGeneratepdf?rowVersion=${rowVersion}`,
+                    token,
+                    body: {}
+                });
+                logger.info(`PDF generated successfully for invoice;`);
+                logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
 
-                    // Save PDF to uploads/invoices directory
-                    let savedFilePath = null;
-                    if (pdfResponse.Data?.AttachmentData) {
-                        const invoiceId = invoicePath.split('/').pop(); // Extract invoice ID from path
-                        const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
-                        const uploadsDir = path.join(__dirname, '../uploads/invoices');
-                        savedFilePath = path.join(uploadsDir, fileName);
-                        
-                        // Ensure directory exists
-                        if (!fs.existsSync(uploadsDir)) {
-                            fs.mkdirSync(uploadsDir, { recursive: true });
-                        }
-                        
-                        // Convert base64 content to buffer and save
-                        const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
-                        fs.writeFileSync(savedFilePath, pdfBuffer);
-                        
-                        logger.info(`PDF saved to: ${savedFilePath}`);
-                    } else {
-                        logger.warn('No AttachmentData found in PDF response:', pdfResponse.Data);
+                // Save PDF to uploads/invoices directory
+                let savedFilePath = null;
+                if (pdfResponse.Data?.AttachmentData) {
+                    const invoiceId = invoicePath.split('/').pop(); // Extract invoice ID from path
+                    const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
+                    const uploadsDir = path.join(__dirname, '../uploads/invoices');
+                    savedFilePath = path.join(uploadsDir, fileName);
+                    
+                    // Ensure directory exists
+                    if (!fs.existsSync(uploadsDir)) {
+                        fs.mkdirSync(uploadsDir, { recursive: true });
                     }
-
-                    return {
-                        success: true,
-                        orderId: order.id,
-                        invoice: invoiceResponse,
-                        pdf: pdfResponse.Data,
-                        pdfPath: savedFilePath
-                    };
-                } catch (pdfError) {
-                    logger.error('Failed to generate PDF:', pdfError);
-                    // Return invoice without PDF - don't fail the whole operation
+                    
+                    // Convert base64 content to buffer and save
+                    const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
+                    fs.writeFileSync(savedFilePath, pdfBuffer);
+                    
+                    logger.info(`PDF saved to: ${savedFilePath}`);
+                } else {
+                    logger.warn('No AttachmentData found in PDF response:', pdfResponse.Data);
                 }
+
+                return {
+                    success: true,
+                    orderId: order.id,
+                    invoice: invoiceResponse,
+                    pdf: pdfResponse.Data,
+                    pdfPath: savedFilePath
+                };
+            } catch (pdfError) {
+                logger.error('Failed to generate PDF:', pdfError);
+                // Return invoice without PDF - don't fail the whole operation
             }
 
             logger.info("Created minimax invoice for order: ", order.id)
@@ -249,7 +247,8 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
                 success: true,
                 message: 'Checkout successful',
                 orderId: order.id,
-                invoice: invoiceResponse
+                invoice: invoiceResponse,
+                pdfPath: savedFilePath
             };
         } catch (invErr) {
             logger.error('Failed to create Minimax invoice:', invErr);

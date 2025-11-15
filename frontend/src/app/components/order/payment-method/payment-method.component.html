@@ -37,18 +37,13 @@
   </div>
 
   <div class="payment-options">
-    <!-- Card Payment -->
-    <div class="payment-option" [class.selected]="selectedMethod === 'card'" (click)="selectMethod('card')">
+    <!-- UPN Payment -->
+    <div class="payment-option" [class.selected]="selectedMethod === 'upn'" (click)="selectMethod('upn')">
       <div class="option-header">
-        <i class="icon credit-card"></i>
-        <h3>Kartica</h3>
+        <i class="icon cash"></i>
+        <h3>UPN Plačilo</h3>
       </div>
-      <p>Varno plačilo s kreditno ali debetno kartico</p>
-      <div class="card-icons">
-        <i class="visa"></i>
-        <i class="mastercard"></i>
-        <i class="maestro"></i>
-      </div>
+      <p>Plačilo preko UPN naloga, ki ga dobite na mail</p>
     </div>
 
     <!-- Cash on Delivery -->
@@ -61,44 +56,18 @@
     </div>
 
   <!-- Card Payment Form -->
-  @if (selectedMethod === 'card') {
-  <div class="payment-form">
-    <h3>Podatki o kartici</h3>
-    <form [formGroup]="cardForm" (ngSubmit)="processPayment()">
-      <div class="form-group">
-        <label for="cardNumber">Številka kartice</label>
-        <input id="cardNumber" type="text" formControlName="cardNumber" placeholder="1234 5678 9012 3456">
-      </div>
+  @if (selectedMethod === 'upn') {
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="expiryDate">Veljavnost</label>
-          <input id="expiryDate" type="text" formControlName="expiryDate" placeholder="MM/YY">
-        </div>
-
-        <div class="form-group">
-          <label for="cvv">CVV</label>
-          <input id="cvv" type="text" formControlName="cvv" placeholder="123">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="cardHolder">Ime na kartici</label>
-        <input id="cardHolder" type="text" formControlName="cardHolder" placeholder="Vnesite ime">
-      </div>
-
-      <div class="security-note">
-        <i class="lock-icon"></i>
-        <p>Vaši podatki so varni. Vaše plačilne podatke ne shranjujemo.</p>
-      </div>
-
-      <button type="submit" class="pay-button" [disabled]="cardForm.invalid">
-        Plačaj {{ totalAmount | currency:'EUR' }}
-      </button>
-    </form>
+  <div class="payment-confirmation">
+    <div class="confirmation-content">
+      <i class="icon cash-large"></i>
+      <h3>UPN Plačilo</h3>
+      <p>Ko plačate vam pošljemo paket.</p>
+      <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
+      <button class="confirm-button" (click)="confirmPayment()">Potrdi naročilo</button>
+    </div>
   </div>
   }
-
   <!-- Cash on Delivery Confirmation -->
   @if (selectedMethod == 'cash') {
 
@@ -106,9 +75,9 @@
     <div class="confirmation-content">
       <i class="icon cash-large"></i>
       <h3>Plačilo po prevzetju</h3>
-      <p>Pri prevzemu paketa boste plačali v gotovini.</p>
+      <p>Pri prevzemu paketa boste plačali znesek.</p>
       <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
-      <button class="confirm-button" (click)="confirmCashPayment()">Potrdi naročilo</button>
+      <button class="confirm-button" (click)="confirmPayment()">Potrdi naročilo</button>
     </div>
   </div>
   }
