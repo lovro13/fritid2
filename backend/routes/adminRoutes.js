@@ -7,7 +7,7 @@ const logger = require('../logger');
 // Get all products (admin view with more details)
 router.get('/products', adminAuth, async (req, res) => {
     try {
-        const products = await Product.findAll();
+        const products = await Product.findAllActive();
         logger.info('Admin fetched all products successfully');
         res.json(products);
     } catch (error) {

@@ -79,7 +79,7 @@ router.post('/', async (req, res) => {
         } else {
             // Create new user from shipping info with null password
             console.log("Creating new user from shipping info");
-            const newUser = await User.create({
+            const user = await User.create({
                 firstName: personInfo.firstName,
                 lastName: personInfo.lastName,
                 email: personInfo.email,
@@ -88,15 +88,15 @@ router.post('/', async (req, res) => {
             });
             
             // Update with shipping details
-            newUser.address = personInfo.address;
-            newUser.postalCode = personInfo.postalCode;
-            newUser.city = personInfo.city;
-            newUser.phoneNumber = personInfo.phone;
-            await newUser.save();
             
-            userId = newUser.id;
+            userId = user.id;
             console.log("Created new user with ID:", userId);
         }
+        user.address = personInfo.address;
+        user.postalCode = personInfo.postalCode;
+        user.city = personInfo.city;
+        user.phoneNumber = personInfo.phone;
+        await user.save();
         console.log("User id sent to orderService", userId)
         
         const result = await create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId });

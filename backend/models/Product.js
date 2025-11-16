@@ -38,9 +38,16 @@ class Product {
         this.created_at = productData.created_at;
     }
 
-    static async findAll() {
+    static async findAllActive() {
         const [rows] = await getPool().query(
             'SELECT * FROM products WHERE is_active = 1 ORDER BY id DESC'
+        );
+        return rows;
+    }
+
+    static async findAll() {
+        const [rows] = await getPool().query(
+            'SELECT * FROM products ORDER BY id DESC'
         );
         return rows;
     }

@@ -16,6 +16,7 @@ class Order {
         this.shippingPostalCode = orderData.shipping_postal_code;
         this.shippingCity = orderData.shipping_city;
         this.shippingPhoneNumber = orderData.shipping_phone_number;
+        this.paymentMethod = orderData.payment_method;
         this.createdAt = orderData.created_at;
         this.type = orderData.type;
         this.orderItems = [];
@@ -29,6 +30,13 @@ class Order {
             SHIPPED: 'SHIPPED',
             DELIVERED: 'DELIVERED',
             CANCELLED: 'CANCELLED'
+        };
+    }
+
+    static get PAYMENT_METHOD() {
+        return {
+            DELIVERY: 'DELIVERY',
+            UPN: 'UPN'
         };
     }
 
@@ -58,7 +66,8 @@ class Order {
         const {
             optUserId, totalAmount, status = Order.STATUS.PENDING,
             shippingFirstName, shippingLastName, shippingEmail,
-            shippingAddress, shippingPostalCode, shippingCity, shippingPhoneNumber
+            shippingAddress, shippingPostalCode, shippingCity, shippingPhoneNumber,
+            paymentMethod = Order.PAYMENT_METHOD.DELIVERY
         } = orderData;
         let userId;
         if (optUserId == null) {
@@ -79,10 +88,10 @@ class Order {
         const [result] = await pool.execute(
             `INSERT INTO orders 
              (user_id, total_amount, status, shipping_first_name, shipping_last_name, 
-              shipping_email, shipping_address, shipping_postal_code, shipping_city, shipping_phone_number) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              shipping_email, shipping_address, shipping_postal_code, shipping_city, shipping_phone_number, payment_method) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [userId, totalAmount, status, shippingFirstName, shippingLastName,
-             shippingEmail, shippingAddress, shippingPostalCode, shippingCity, shippingPhoneNumber]
+             shippingEmail, shippingAddress, shippingPostalCode, shippingCity, shippingPhoneNumber, paymentMethod]
         );
 
         return Order.findById(result.insertId);
@@ -98,11 +107,12 @@ class Order {
         return this;
     }
 
+
     async loadOrderItems() {
         const pool = getPool();
         const [rows] = await pool.execute(
             `SELECT oi.*, p.name as product_name, p.image_url as product_image_url 
-             FROM order_items oi 
+             FROM order_items oi
              JOIN products p ON oi.product_id = p.id 
              WHERE oi.order_id = ?`,
             [this.id]
