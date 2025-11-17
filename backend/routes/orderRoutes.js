@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
 const { createInvoiceForOrder } = require('../services/minimaxService');
 const { create_order_and_send_issue_to_mmax } = require('../services/orderService');
+const MailService = require('../services/mailService');
 const logger = require('../logger');
 
 const router = express.Router();
@@ -64,21 +65,18 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 // Create order (checkout)
 router.post('/', async (req, res) => {
     logger.info('Processing checkout request', { body: req.body });
+    // EXTRACT BODY PARAMETERS
     const { personInfo, cartItems, typeOfOrder } = req.body;
     logger.info('Checkout data received', { personInfo, cartItems, typeOfOrder });
-    if (!personInfo || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
-        logger.warn('Invalid checkout data', { personInfo, cartItems, typeOfOrder });
-        return res.status(400).json({ error: 'Invalid checkout data' });
-    }
 
     try {
+        // CREATE USER IF NOT EXISTS OR GET USER ID If EXISTS
         const user = await User.findByEmail(personInfo.email);
         if (user != null) {
-            console.log("found user via email", user.id);
+            logger.info("found user via email", user.id);
             userId = user.id;
         } else {
-            // Create new user from shipping info with null password
-            console.log("Creating new user from shipping info");
+            logger.info("Creating new user from shipping info");
             const user = await User.create({
                 firstName: personInfo.firstName,
                 lastName: personInfo.lastName,
@@ -87,7 +85,6 @@ router.post('/', async (req, res) => {
                 role: 'user'
             });
             
-            // Update with shipping details
             
             userId = user.id;
             console.log("Created new user with ID:", userId);
@@ -96,18 +93,55 @@ router.post('/', async (req, res) => {
         user.postalCode = personInfo.postalCode;
         user.city = personInfo.city;
         user.phoneNumber = personInfo.phone;
+        logger.info("Saving user with updated info:");
         await user.save();
-        console.log("User id sent to orderService", userId)
-        
-        const result = await create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId });
+
+        // CREATE ORDER
+        // Calculate total amount
+        const totalAmount = cartItems.reduce((sum, item) => {
+            return sum + (item.product.price * item.quantity);
+        }, 0);
+
+        // Create order
+        logger.info("Creating order for user ID:", userId);
+        const order = await Order.create({
+            optUserId: userId,
+            totalAmount: totalAmount.toFixed(2),
+            status: 'Pending',
+            shippingFirstName: personInfo.firstName,
+            shippingLastName: personInfo.lastName,
+            shippingAddress: personInfo.address,
+            shippingEmail: personInfo.email,
+            shippingPhoneNumber: personInfo.phone,
+            shippingCity: personInfo.city,
+            shippingPostalCode: personInfo.postalCode,
+            paymentMethod: typeOfOrder
+        });        
+        if (!order) {
+            throw new Error('Failed to create order.');
+        }
+        logger.info("Order created successfully with ID:", order.id);
+
+        // Check cart items against database products
+        const cartItemsProducts = []
+        logger.info("Verifying cart items against database products");
+        for (const item of cartItems) {
+            const product = await Product.findById(item.product.id);
+            if (!product) {
+                throw new Error(`Product with ID ${item.product.id} not found in database`);
+            }
+            cartItemsProducts.push(product);
+        }
+        logger.info("All cart items verified against database products");
+        const minimax_invoice_result = await create_order_and_send_issue_to_mmax({order, user, cartItemsProducts });
         
         // Check if minimax integration failed
-        if (result.invoiceError) {
-            logger.error('Minimax integration failed for order:', result.orderId, result.invoiceError);
+        if (minimax_invoice_result.invoiceError) {
+            logger.error('Minimax integration failed for order:', minimax_invoice_result.orderId, minimax_invoice_result.invoiceError);
             return res.status(500).json({ 
                 error: 'Order created but invoice generation failed', 
-                details: result.invoiceError,
-                orderId: result.orderId 
+                details: minimax_invoice_result.invoiceError,
+                orderId: minimax_invoice_result.orderId 
             });
         }
 
@@ -117,7 +151,21 @@ router.post('/', async (req, res) => {
 
         // TOOD SEND MAIL TO CUSTOMER ONE IF HE PAYS UPN AND ONE FOR CASH ON DELIVERY
 
-        res.status(201).json(result);
+        logger.info("Created minimax invoice for order: ", order.id)
+        logger.info("order.paymentMethod: ", order.paymentMethod);
+        
+        // Send email notifications
+        await MailService.sendOwnerOrderNotification(order);
+        logger.info("Payment method on order and received", order.paymentMethod, personInfo.paymentMethod);
+        if (order.paymentMethod === 'UPN') {
+            await MailService.sendOrderConfirmation(order, true, minimax_invoice_result.invoiceId);
+        } else {
+            await MailService.sendOrderConfirmation(order, false, null);
+        }
+            
+
+        res.status(201).json(minimax_invoice_result);
+        return;
     } catch (error) {
         logger.error('Checkout error:', error);
         res.status(500).json({ error: 'Failed to process checkout', details: error.message });

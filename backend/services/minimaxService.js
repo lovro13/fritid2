@@ -192,13 +192,12 @@ async function createNewCustomer({ customerId, bearerToken = null }) {
   }
 }
 
-async function getCustomerId(order) {
+async function getCustomerId(user) {
   // Gets customer id of an order or creates it
-  logger.info('getCustomerId called with order.userId:', order.userId);
-  logger.info('Order object keys:', Object.keys(order));
+  logger.info('getCustomerId called with user.id:', user.id);
 
   const orgId = process.env.MINIMAX_ORG_ID;
-  let code = "api" + order.userId;
+  let code = "api" + user.id;
 
   // Get token for API requests
   let token;
@@ -229,9 +228,9 @@ async function getCustomerId(order) {
 
   // If customer doesn't exist, create new customer
   try {
-    logger.info(`Creating new customer in Minimax for user ID: ${order.userId}`);
+    logger.info(`Creating new customer in Minimax for user ID: ${user.userId}`);
     const res = await createNewCustomer({
-      customerId: order.userId,
+      customerId: user.userId,
       bearerToken: token
     });
     logger.info("Created new customer in Minimax");

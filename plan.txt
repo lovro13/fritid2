@@ -1,6 +1,7 @@
 Backend:
 - UPN PDF
 - GLS API put it in /order endpoint
+- dynamic id for item in minimax, now all items get under the same minimax item???
 
 Frontend:
 - tell the user the user with this email exist when he is registering with the existing email

@@ -11,76 +11,16 @@ const path = require('path');
 
 const idPostnina = 324;
 
-async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, userId }) {
-
+async function create_order_and_send_issue_to_mmax({order, user, cartItemsProducts}) {
+    const orgId = process.env.MINIMAX_ORG_ID;
+    const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
+    let invoiceId = null;
+    
     try {
-        // Calculate total amount
-        const totalAmount = cartItems.reduce((sum, item) => {
-            return sum + (item.product.price * item.quantity);
-        }, 0);
-
-        // Create order
-        const order = await Order.create({
-            optUserId: userId,
-            totalAmount: totalAmount.toFixed(2),
-            status: 'Pending',
-            shippingFirstName: personInfo.firstName,
-            shippingLastName: personInfo.lastName,
-            shippingAddress: personInfo.address,
-            shippingEmail: personInfo.email,
-            shippingPhoneNumber: personInfo.phone,
-            shippingCity: personInfo.city,
-            shippingPostalCode: personInfo.postalCode,
-            paymentMethod: personInfo.paymentMethod
-        });
-
-        if (!order) {
-            throw new Error('Failed to create order.');
-        }
-
-        // Create order items
-        console.log('Creating order items for order ID:', order.id);
-
-
-        // First, let's see what products exist in the database
-        const allProducts = await Product.findAllActive();
-
-        // Then validate each cart item
-        for (const item of cartItems) {
-            console.log(`Checking if product ID ${item.product.id} exists...`);
-            const product = await Product.findById(item.product.id);
-            if (!product) {
-                console.log(`Product with ID ${item.product.id} not found in database`);
-                console.log('Available product IDs:', allProducts.map(p => p.id));
-                throw new Error(`Product with ID ${item.product.id} not found in database`);
-            }
-            console.log(`✅ Product ${item.product.id} exists in database`);
-        }
-
-        const orderItemsPromises = cartItems.map(async (item) => {
-            console.log('Processing cart item:', {
-                productId: item.product.id,
-                productName: item.product.name,
-                quantity: item.quantity,
-                price: item.product.price,
-                selectedColor: item.selectedColor
-            });
-
-            return OrderItem.create({
-                orderId: order.id,
-                productId: item.product.id,
-                quantity: item.quantity,
-                price: item.product.price
-            });
-        });
-
-        await Promise.all(orderItemsPromises);
-
-        // Always create the invoice after order creation using our own backend endpoint
+        // CREATING MINIMAX INVOICE
         logger.info("Creating minimax invoice")
         try {
-            const orgId = process.env.MINIMAX_ORG_ID;
-
+            // GET ME TOKEN
             let token = null;
             if (process.env.MINIMAX_USERNAME && process.env.MINIMAX_PASSWORD) {
                 const t = await getToken({
@@ -94,115 +34,95 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
             }
             logger.info("Got minimax token")
 
-            // Get order with user information using models
-            const orderData = await Order.findById(order.id);
-            logger.info("Got order data from database for minimax invoice: ", orderData);
-            if (!orderData) {
-                throw new Error('Order not found');
-            }
-
-            // Get order items with product information using models
-            const orderItems = await OrderItem.findByOrderId(order.id);
-            if (!orderItems || orderItems.length === 0) {
-                throw new Error('Order has no items');
-            }
-
-            // Attach product info to each order item
-            for (const item of orderItems) {
-                const product = await Product.findById(item.productId);
-                item.productName = product ? product.name : `Product ${item.productId}`;
-                item.description = product ? product.description : item.productName;
-            }
-
-            // Get current date
+            
+            // Calculate dates for invoice
             const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-
-            // Calculate due date (14 days from now as per env)
             const dueDate = new Date();
             dueDate.setDate(dueDate.getDate() + parseInt(process.env.MINIMAX_DUE_DAYS || 14));
             const dueDateStr = dueDate.toISOString().split('T')[0];
 
-            // Build invoice rows from order items
-            const invoiceRows = orderItems.map((item, index) => {
-                const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
+            // PREPARE MINIMAX ITEMS
+            const invoiceRows = cartItemsProducts.map((item, index) => {
                 const priceWithoutVat = parseFloat(item.price) * (1 - vatPercent / 100);
                 const priceWithVat = parseFloat(item.price);
                 const totalValue = priceWithoutVat * item.quantity;
 
                 return {
-                    Item: { ID: process.env.MINIMAX_ITEM_ID }, // Use configured item ID
-                    ItemName: item.productName || `Product ${item.productId}`,
+                    Item: { ID: process.env.MINIMAX_ITEM_ID }, // THIS PROBABLY NEEDS FIXING TO DYNAMIC ITEM IDS, NEED TO ASK MIRAN IF IT MATTERS
+                    ItemName: item.name,
                     RowNumber: index + 1,
                     ItemCode: `ITEM_${item.productId}`,
-                    Description: item.description || item.productName || `Product ${item.productId}`,
+                    Description: item.description || item.name,
                     Quantity: item.quantity,
-                    UnitOfMeasurement: process.env.MINIMAX_UOM || "kos",
+                    UnitOfMeasurement: "kos",
                     Price: priceWithoutVat,
                     PriceWithVAT: priceWithVat,
                     VATPercent: vatPercent,
                     Discount: 0,
                     DiscountPercent: 0,
                     Value: totalValue,
-                    VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID || 1 }
+                    VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
                 };
             });
 
-            // Get the customer ID (this is async)
-            logger.info('Getting customer ID for invoice with orderdata', orderData);
-            const customerId = await getCustomerId(orderData);
+            // Get the custpomer minimax ID
+            const customerId = await getCustomerId(user);
             logger.info('Using customer ID for invoice:', customerId);
 
+
+            // SEND API REQUEST TO CREATE INVOICE
             const invoicePayload = {
                 Customer: { ID: customerId },
                 DateIssued: date,
                 DateTransaction: date,
                 DateTransactionFrom: date,
                 DateDue: dueDateStr,
-                AddresseeName: `${orderData.shippingFirstName} ${orderData.shippingLastName}`,
-                AddresseeAddress: orderData.shippingAddress,
-                AddresseePostalCode: orderData.shippingPostalCode,
-                AddresseeCity: orderData.shippingCity,
+                AddresseeName: `${order.shippingFirstName} ${order.shippingLastName}`,
+                AddresseeAddress: order.shippingAddress,
+                AddresseePostalCode: order.shippingPostalCode,
+                AddresseeCity: order.shippingCity,
                 AddresseeCountryName: "Slovenia",
                 AddresseeCountry: { ID: 191 }, // Slovenia country ID
                 Currency: { ID: process.env.MINIMAX_CURRENCY_ID || 7 }, // EUR
                 PaymentMethod: { ID: process.env.MINIMAX_PAYMENT_METHOD_ID },
                 Status: "O", // Open status
-                PricesOnInvoice: process.env.MINIMAX_PRICES_ON_INVOICE || "N",
+                PricesOnInvoice: process.env.MINIMAX_PRICES_ON_INVOICE,
                 RecurringInvoice: "N",
                 InvoiceType: "R", // Regular invoice
-                PaymentStatus: process.env.MINIMAX_ALREADY_PAID === "Y" ? "Placan" : "NePlačan",
+                PaymentStatus: "NePlačan",
                 IssuedInvoiceRows: invoiceRows
             };
 
-
             logger.info('Creating Minimax invoice');
-
-            // Create invoice via Minimax API
             const [invoiceResponse, headers] = await apiRequestToMinimax({
                 method: 'POST',
                 path: `orgs/${orgId}/issuedinvoices`,
                 token,
                 body: invoicePayload
             });
+            logger.info(`Invoice created successfully: data: ${JSON.stringify(invoiceResponse)}, 
+            headers: ${JSON.stringify(headers)}`);
 
-            // Extract invoice path from location header
+
+            // GET THE INVOICE ID
             const locationHeader = headers?.location || '';
             const invoicePathMatch = locationHeader.match(/\/SI\/API\/api\/(orgs\/\d+\/issuedinvoices\/\d+)/);
             const invoicePath = invoicePathMatch[1];
+            invoiceId = invoicePath.split('/').pop(); // Extract invoice ID from path
             logger.info('Extracted invoice path from location header:', invoicePath);
+            logger.info('Extracted invoice ID:', invoiceId);
+            logger.info("Checking if invoice exists")
 
-            logger.info(`Invoice created successfully: data: ${JSON.stringify(invoiceResponse)}, 
-            headers: ${JSON.stringify(headers)}`);
-            logger.info("Checking if inovice exists")
+            // GET THE WHOLE INVOICE TO GET ROWVERSION FOR PDF GENERATION
             const [checkInvoiceResponse, checkHeaders] = await apiRequestToMinimax({
                 method: 'GET',
                 path: invoicePath,
                 token
             });
             try {
-                // Get the rowVersion from the invoice check response
                 const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
                 logger.info("got row version for pdf generation:", rowVersion);
+                // GET THE PDF FOR UPN PAYMENT METHOD
                 const [pdfResponse, pdfHeaders] = await apiRequestToMinimax({
                     method: 'PUT',
                     path: invoicePath + `/actions/issueAndGeneratepdf?rowVersion=${rowVersion}`,
@@ -212,43 +132,29 @@ async function create_order_and_send_issue_to_mmax({ personInfo, cartItems, user
                 logger.info(`PDF generated successfully for invoice;`);
                 logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
 
-                // Save PDF to uploads/invoices directory
+                // SAVE PDF
                 let savedFilePath = null;
-                const invoiceId = invoicePath.split('/').pop(); // Extract invoice ID from path
                 const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
                 const uploadsDir = path.join(__dirname, '../uploads/invoices');
                 savedFilePath = path.join(uploadsDir, fileName);
-                
-                // Ensure directory exists
-                if (!fs.existsSync(uploadsDir)) {
-                    fs.mkdirSync(uploadsDir, { recursive: true });
-                }
-                
-                // Convert base64 content to buffer and save
                 const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
                 fs.writeFileSync(savedFilePath, pdfBuffer);
-                
                 logger.info(`PDF saved to: ${savedFilePath}`);
             } catch (pdfError) {
                 logger.error('Failed to generate PDF:', pdfError);
                 // Return invoice without PDF - don't fail the whole operation
             }
 
-            logger.info("Created minimax invoice for order: ", order.id)
-            logger.info("order.paymentMethod: ", order.paymentMethod);
-            logger.info("Sending regular order confirmation email");
-            await MailService.sendOrderConfirmation(order, false, null);
-            await MailService.sendOwnerOrderNotification(order);
             return {
                 success: true,
                 message: 'Checkout successful',
                 orderId: order.id,
                 invoice: invoiceResponse,
+                invoiceId: invoiceId
             };
         } catch (invErr) {
-            logger.error('Failed to create Minimax invoice, didnt:', invErr);
-            order.status = 'Invoice Error';
-            await order.save();
+            logger.error('Failed to create Minimax invoice:', invErr);
+            await order.updateStatus('Invoice Error');
             return {
                 success: false,
                 message: 'Checkout unsuccessful',

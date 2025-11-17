@@ -7,7 +7,6 @@ class Product {
         this.description = productData.description;
         this.price = parseFloat(productData.price);
         this.image_url = productData.image_url; // Keep as image_url for consistency
-        console.log('About to parse colors:', productData.colors, 'Type:', typeof productData.colors);
         try {
             if (!productData.colors || productData.colors === null || productData.colors === '') {
                 this.colors = [];

@@ -35,8 +35,8 @@ class Order {
 
     static get PAYMENT_METHOD() {
         return {
-            DELIVERY: 'DELIVERY',
-            UPN: 'UPN'
+            DELIVERY: 'delivery',
+            UPN: 'upn'
         };
     }
 
