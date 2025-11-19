@@ -29,9 +29,9 @@ class GlsService {
         this.typeOfPrinter = 'A4_4x1'; // Force A4 PDF format
         this.baseUrl = BASE;
 
-        if (!this.username || !this.password || !this.clientNumber) {
-            throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
-        }
+        // if (!this.username || !this.password || !this.clientNumber) {
+        //     throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
+        // }
     }
 
     /**
