@@ -228,9 +228,9 @@ async function getCustomerId(user) {
 
   // If customer doesn't exist, create new customer
   try {
-    logger.info(`Creating new customer in Minimax for user ID: ${user.userId}`);
+    logger.info(`Creating new customer in Minimax for user ID: ${user.id}`);
     const res = await createNewCustomer({
-      customerId: user.userId,
+      customerId: user.id,
       bearerToken: token
     });
     logger.info("Created new customer in Minimax");

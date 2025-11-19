@@ -7,7 +7,9 @@ const { authenticateToken } = require('../middleware/auth');
 const { createInvoiceForOrder } = require('../services/minimaxService');
 const { create_order_and_send_issue_to_mmax } = require('../services/orderService');
 const MailService = require('../services/mailService');
+const glsService = require('../services/glsService');
 const logger = require('../logger');
+const path = require('path');
 
 const router = express.Router();
 
@@ -71,13 +73,15 @@ router.post('/', async (req, res) => {
 
     try {
         // CREATE USER IF NOT EXISTS OR GET USER ID If EXISTS
-        const user = await User.findByEmail(personInfo.email);
+        let user = await User.findByEmail(personInfo.email);
+        let userId;
+        
         if (user != null) {
-            logger.info("found user via email", user.id);
+            logger.info("Found existing user via email", user.id);
             userId = user.id;
         } else {
             logger.info("Creating new user from shipping info");
-            const user = await User.create({
+            user = await User.create({
                 firstName: personInfo.firstName,
                 lastName: personInfo.lastName,
                 email: personInfo.email,
@@ -85,15 +89,16 @@ router.post('/', async (req, res) => {
                 role: 'user'
             });
             
-            
             userId = user.id;
-            console.log("Created new user with ID:", userId);
+            logger.info("Created new user with ID:", userId);
         }
+        
+        // Update user address info
         user.address = personInfo.address;
         user.postalCode = personInfo.postalCode;
         user.city = personInfo.city;
         user.phoneNumber = personInfo.phone;
-        logger.info("Saving user with updated info:");
+        logger.info("Saving user with updated info for user ID:", userId);
         await user.save();
 
         // CREATE ORDER
@@ -101,6 +106,15 @@ router.post('/', async (req, res) => {
         const totalAmount = cartItems.reduce((sum, item) => {
             return sum + (item.product.price * item.quantity);
         }, 0);
+
+        // Map frontend payment type to database enum
+        let paymentMethod = 'DELIVERY'; // Default
+        if (typeOfOrder === 'upn' || typeOfOrder === 'UPN') {
+            paymentMethod = 'UPN';
+        } else if (typeOfOrder === 'cash'  || typeOfOrder === 'delivery') {
+            paymentMethod = 'DELIVERY';
+        }
+        logger.info("Mapped payment type:", typeOfOrder, "->", paymentMethod);
 
         // Create order
         logger.info("Creating order for user ID:", userId);
@@ -115,7 +129,7 @@ router.post('/', async (req, res) => {
             shippingPhoneNumber: personInfo.phone,
             shippingCity: personInfo.city,
             shippingPostalCode: personInfo.postalCode,
-            paymentMethod: typeOfOrder
+            paymentMethod: paymentMethod
         });        
         if (!order) {
             throw new Error('Failed to create order.');
@@ -145,17 +159,29 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Make call here to GLS API, TODO, whole GLS API to make "prevoznica"/sticker for the package
+        // Generate GLS shipping label
+        let glsLabelPath = null;
+        try {
+            logger.info("Generating GLS shipping label for order:", order.id);
+            const glsResult = await glsService.generateLabelForOrder(order);
 
-        // SEND MAIL TO OWNER ABOUT NEW ORDER, TODO
-
-        // TOOD SEND MAIL TO CUSTOMER ONE IF HE PAYS UPN AND ONE FOR CASH ON DELIVERY
+            if (glsResult.success) {
+                glsLabelPath = glsResult.labelPath;
+                logger.info("GLS label saved to:", glsLabelPath);
+                logger.info("GLS parcel number:", glsResult.parcelNumber);
+            } else {
+                logger.error("Failed to generate GLS label:", glsResult.errors);
+            }
+        } catch (glsError) {
+            logger.error("GLS label generation error:", glsError);
+            // Don't fail the whole order if GLS fails
+        }
 
         logger.info("Created minimax invoice for order: ", order.id)
         logger.info("order.paymentMethod: ", order.paymentMethod);
         
         // Send email notifications
-        await MailService.sendOwnerOrderNotification(order);
+        await MailService.sendOwnerOrderNotification(order, glsLabelPath);
         logger.info("Payment method on order and received", order.paymentMethod, personInfo.paymentMethod);
         if (order.paymentMethod === 'UPN') {
             await MailService.sendOrderConfirmation(order, true, minimax_invoice_result.invoiceId);

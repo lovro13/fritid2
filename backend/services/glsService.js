@@ -158,6 +158,91 @@ class GlsService {
     }
 
     /**
+     * Generate GLS label for an order with automatic address parsing
+     * Uses sender info from environment variables
+     * 
+     * @param {Object} order - Order object from Order.js
+     * @returns {Promise<Object>} Result with success, labelPath, parcelNumber, and errors
+     */
+    async generateLabelForOrder(order) {
+        try {
+            // Get sender address from environment
+            const pickupAddress = {
+                Name: process.env.GLS_SENDER_NAME || 'FRITID d.o.o.',
+                Street: process.env.GLS_SENDER_STREET || 'Ljubljanska cesta',
+                HouseNumber: process.env.GLS_SENDER_HOUSE_NUMBER || '45',
+                City: process.env.GLS_SENDER_CITY || 'KAMNIK',
+                ZipCode: process.env.GLS_SENDER_ZIP || '1241',
+                CountryIsoCode: 'SI',
+                ContactPhone: process.env.GLS_SENDER_PHONE || '+386 1 234 5678',
+                ContactEmail: process.env.GLS_SENDER_EMAIL || 'info@fritid.si'
+            };
+
+            // Parse delivery address
+            // Try to split address into street and house number
+            let street = order.shippingAddress;
+            let houseNumber = '';
+            
+            // Common patterns: "Street 123", "Street 123a", "Street name 45"
+            const addressMatch = order.shippingAddress.match(/^(.+?)\s+(\d+[a-zA-Z]?)$/);
+            if (addressMatch) {
+                street = addressMatch[1].trim();
+                houseNumber = addressMatch[2].trim();
+            }
+
+            const deliveryAddress = {
+                Name: `${order.shippingFirstName} ${order.shippingLastName}`,
+                Street: street,
+                HouseNumber: houseNumber,
+                City: order.shippingCity,
+                ZipCode: order.shippingPostalCode,
+                CountryIsoCode: 'SI',
+                ContactPhone: order.shippingPhoneNumber,
+                ContactEmail: order.shippingEmail
+            };
+
+            // Determine if COD (Cash on Delivery) should be used
+            const isCOD = order.paymentMethod === 'DELIVERY';
+            
+            // Generate label
+            const result = await this.printLabel({
+                ClientReference: `ORDER-${order.id}`,
+                Content: 'Order items',
+                Count: 1,
+                PickupAddress: pickupAddress,
+                DeliveryAddress: deliveryAddress,
+                CODAmount: isCOD ? order.totalAmount : undefined,
+                CODCurrency: isCOD ? 'EUR' : undefined
+            });
+
+            if (!result.success) {
+                return result;
+            }
+
+            // Save the label
+            const filename = `gls-label-order-${order.id}.pdf`;
+            const labelPath = this.saveLabelToFile(result.pdfBuffer, filename);
+
+            return {
+                success: true,
+                labelPath: labelPath,
+                parcelNumber: result.parcelNumber,
+                parcelId: result.parcelId,
+                errors: []
+            };
+
+        } catch (error) {
+            return {
+                success: false,
+                errors: [{
+                    code: 'GENERATE_ERROR',
+                    description: error.message
+                }]
+            };
+        }
+    }
+
+    /**
      * Save label PDF to file
      * 
      * @param {Buffer} pdfBuffer - PDF buffer from printLabel
@@ -165,7 +250,7 @@ class GlsService {
      * @returns {string} Full path to saved file
      */
     saveLabelToFile(pdfBuffer, filename = 'gls-label.pdf') {
-        const outputPath = path.join(__dirname, '..', 'uploads', filename);
+        const outputPath = path.join(__dirname, '..', 'uploads', 'gls-labels', filename);
         
         // Ensure directory exists
         const dir = path.dirname(outputPath);

@@ -43,15 +43,14 @@ async function create_order_and_send_issue_to_mmax({order, user, cartItemsProduc
 
             // PREPARE MINIMAX ITEMS
             const invoiceRows = cartItemsProducts.map((item, index) => {
-                const priceWithoutVat = parseFloat(item.price) * (1 - vatPercent / 100);
                 const priceWithVat = parseFloat(item.price);
-                const totalValue = priceWithoutVat * item.quantity;
+                const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
 
                 return {
-                    Item: { ID: process.env.MINIMAX_ITEM_ID }, // THIS PROBABLY NEEDS FIXING TO DYNAMIC ITEM IDS, NEED TO ASK MIRAN IF IT MATTERS
+                    Item: { ID: process.env.MINIMAX_ITEM_ID },
                     ItemName: item.name,
                     RowNumber: index + 1,
-                    ItemCode: `ITEM_${item.productId}`,
+                    ItemCode: `ITEM_${item.id}`,
                     Description: item.description || item.name,
                     Quantity: item.quantity,
                     UnitOfMeasurement: "kos",
@@ -60,7 +59,7 @@ async function create_order_and_send_issue_to_mmax({order, user, cartItemsProduc
                     VATPercent: vatPercent,
                     Discount: 0,
                     DiscountPercent: 0,
-                    Value: totalValue,
+                    Value: totalValueWithVat,
                     VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
                 };
             });

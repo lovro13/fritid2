@@ -267,10 +267,19 @@ Hvala, ker nakupujete pri Fritid!
     /**
      * Send order notification to store owner
      * @param {Object} order - Order object from Order.js
+     * @param {string|null} glsLabelPath - Path to GLS label PDF (optional)
      * @returns {Promise<Object>} - Email send result
      */
-    async sendOwnerOrderNotification(order) {
+    async sendOwnerOrderNotification(order, glsLabelPath = null) {
         try {
+            logger.info(`Preparing to send owner notification for order #${order.id}, GLS label: ${glsLabelPath ? 'yes' : 'no'}`);
+            
+            // Validate GLS label exists if path provided
+            if (glsLabelPath && !fs.existsSync(glsLabelPath)) {
+                logger.warn(`GLS label file not found: ${glsLabelPath}`);
+                glsLabelPath = null; // Don't attach if file doesn't exist
+            }
+
             // Load order items if not already loaded
             if (!order.orderItems || order.orderItems.length === 0) {
                 await order.loadOrderItems();
@@ -395,11 +404,15 @@ Nadaljnji koraki:
                 to: ownerEmail,
                 subject: `🔔 Novo naročilo #${order.id} - ${order.shippingFirstName} ${order.shippingLastName}`,
                 text: textContent,
-                html: htmlContent
+                html: htmlContent,
+                attachments: glsLabelPath ? [{
+                    filename: `GLS_nalepka_narocilo_${order.id}.pdf`,
+                    path: glsLabelPath
+                }] : []
             };
 
             const info = await this.transporter.sendMail(mailOptions);
-            logger.info(`Owner notification email sent successfully for order #${order.id}`, {
+            logger.info(`Owner notification email sent successfully for order #${order.id}${glsLabelPath ? ' with GLS label' : ''}`, {
                 messageId: info.messageId,
                 recipient: ownerEmail
             });
