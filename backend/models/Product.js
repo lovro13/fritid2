@@ -31,6 +31,7 @@ class Product {
             }
         }
         console.log('Parsed colors:', this.colors);
+        this.minimax_id = productData.minimax_id;
         this.category = productData.category;
         this.stock_quantity = productData.stock_quantity;
         this.is_active = Boolean(productData.is_active);
@@ -76,11 +77,11 @@ class Product {
     }
 
     static async create(data) {
-        const { name, description, price, image_url, colors, category, stock_quantity, is_active } = data;
+        const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
         const [res] = await getPool().query(
             `INSERT INTO products
-             (name, description, price, image_url, colors, category, stock_quantity, is_active)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 name,
                 description ?? null,
@@ -89,7 +90,8 @@ class Product {
                 colors ? JSON.stringify(colors) : null,
                 category ?? null,
                 stock_quantity ?? 0,
-                is_active ?? 1
+                is_active ?? 1,
+                minimax_id ?? null
             ]
         );
         return this.findById(res.insertId);
@@ -101,7 +103,7 @@ class Product {
     }
 
     static async update(id, data) {
-        const { name, description, price, image_url, colors, category, stock_quantity, is_active } = data;
+        const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
         const [res] = await getPool().query(
             `UPDATE products SET 
              name = ?,
@@ -111,7 +113,8 @@ class Product {
              colors = ?,
              category = ?,
              stock_quantity = ?,
-             is_active = ?
+             is_active = ?,
+             minimax_id = ?,
              WHERE id = ?`,
             [
                 name,
@@ -122,6 +125,7 @@ class Product {
                 category ?? null,
                 stock_quantity ?? 0,
                 is_active ?? 1,
+                minimax_id ?? null,
                 id
             ]
         );

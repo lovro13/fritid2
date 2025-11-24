@@ -11,11 +11,11 @@ const path = require('path');
 
 const idPostnina = 324;
 
-async function create_order_and_send_issue_to_mmax({order, user, cartItemsProducts}) {
+async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts }) {
     const orgId = process.env.MINIMAX_ORG_ID;
     const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
     let invoiceId = null;
-    
+
     try {
         // CREATING MINIMAX INVOICE
         logger.info("Creating minimax invoice")
@@ -34,7 +34,7 @@ async function create_order_and_send_issue_to_mmax({order, user, cartItemsProduc
             }
             logger.info("Got minimax token")
 
-            
+
             // Calculate dates for invoice
             const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             const dueDate = new Date();
@@ -46,8 +46,10 @@ async function create_order_and_send_issue_to_mmax({order, user, cartItemsProduc
                 const priceWithVat = parseFloat(item.price);
                 const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
 
+                const totalValueWithVat = priceWithVat * item.quantity;
+
                 return {
-                    Item: { ID: process.env.MINIMAX_ITEM_ID },
+                    Item: { ID: item.minimax_id || process.env.MINIMAX_ITEM_ID },
                     ItemName: item.name,
                     RowNumber: index + 1,
                     ItemCode: `ITEM_${item.id}`,
@@ -63,6 +65,33 @@ async function create_order_and_send_issue_to_mmax({order, user, cartItemsProduc
                     VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
                 };
             });
+
+            // Add shipping cost
+            if (idPostnina) {
+                const shippingProduct = await Product.findById(idPostnina);
+                if (shippingProduct) {
+                    const priceWithVat = parseFloat(shippingProduct.price);
+                    const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
+                    const totalValueWithVat = priceWithVat * 1; // Quantity 1
+
+                    invoiceRows.push({
+                        Item: { ID: shippingProduct.minimax_id || process.env.MINIMAX_ITEM_ID },
+                        ItemName: shippingProduct.name,
+                        RowNumber: invoiceRows.length + 1,
+                        ItemCode: `ITEM_${shippingProduct.id}`,
+                        Description: shippingProduct.description || shippingProduct.name,
+                        Quantity: 1,
+                        UnitOfMeasurement: "kos",
+                        Price: priceWithoutVat,
+                        PriceWithVAT: priceWithVat,
+                        VATPercent: vatPercent,
+                        Discount: 0,
+                        DiscountPercent: 0,
+                        Value: totalValueWithVat,
+                        VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
+                    });
+                }
+            }
 
             // Get the custpomer minimax ID
             const customerId = await getCustomerId(user);

@@ -10,22 +10,17 @@ const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
 
 
 
-async function buildInvoiceBodyFromOrder(order) {
+async function buildInvoiceBodyFromOrder(order, customerId) {
   const orgId = process.env.MINIMAX_ORG_ID;
   const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
   const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
   const itemId = parseInt(process.env.MINIMAX_ITEM_ID, 10);
 
-  logger.info("Getting customer ID for order:", order.id);
-  // Temporarily use static customer ID while debugging
-  const customerId = parseInt(process.env.MINIMAX_CUSTOMER_ID, 10);
-  logger.info("Using static customer ID:", customerId);
-
   const paymentMethodId = parseInt(process.env.MINIMAX_PAYMENT_METHOD_ID, 10);
 
   if (!orgId) throw new Error('MINIMAX_ORG_ID not set');
   if (!itemId) throw new Error('MINIMAX_ITEM_ID not set');
-  if (!customerId) throw new Error('MINIMAX_CUSTOMER_ID not set');
+  if (!customerId) throw new Error('customerId not provided');
   if (!paymentMethodId) throw new Error('MINIMAX_PAYMENT_METHOD_ID not set');
 
   // Ensure orderItems with product names are loaded
@@ -85,7 +80,17 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
   }
   await order.loadOrderItems();
 
-  const body = await buildInvoiceBodyFromOrder(order);
+  // Get the user associated with the order
+  const user = await User.findById(order.userId);
+  if (!user) {
+    throw new Error(`User not found for order ${orderId}`);
+  }
+
+  // Get or create customer in Minimax
+  const customerId = await getCustomerId(user);
+  logger.info(`Using Minimax customer ID: ${customerId} for order ${orderId}`);
+
+  const body = await buildInvoiceBodyFromOrder(order, customerId);
 
   let token = bearerToken;
   if (!token) {
@@ -241,7 +246,7 @@ async function getCustomerId(user) {
     });
     logger.info(`Successfully created new customer with ID: ${newCustomer.CustomerId}`);
     return newCustomer.CustomerId;
-    
+
   } catch (createError) {
     logger.error('Failed to create new customer:', createError);
     throw createError;

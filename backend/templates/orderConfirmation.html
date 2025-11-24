@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .order-details { background-color: white; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #f0f0f0; padding: 10px; text-align: left; }
+        .total { font-size: 18px; font-weight: bold; margin-top: 20px; text-align: right; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        .payment-info { background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4CAF50; margin: 15px 0; border-radius: 5px; }
+        .payment-info.upn { background-color: #e3f2fd; border-left: 4px solid #2196F3; }
+        .important { background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0; border-radius: 5px; }
+        .attachment-note { background-color: #e8f5e9; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{{title}}</h1>
+        </div>
+        <div class="content">
+            <p>Pozdravljeni {{firstName}} {{lastName}},</p>
+            <p>Hvala za vaše naročilo! {{introText}}</p>
+            
+            {{paymentInfoHtml}}
+            
+            <div class="order-details">
+                <h2>Naročilo #{{orderId}}</h2>
+                <p><strong>Datum naročila:</strong> {{orderDate}}</p>
+                
+                <h3>Naslov za dostavo:</h3>
+                <p>
+                    {{firstName}} {{lastName}}<br>
+                    {{address}}<br>
+                    {{postalCode}} {{city}}<br>
+                </p>
+                
+                <h3>Naročeni izdelki:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Izdelek</th>
+                            <th style="text-align: center;">Količina</th>
+                            <th style="text-align: right;">Cena</th>
+                            <th style="text-align: right;">Skupaj</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{orderItemsHtml}}
+                    </tbody>
+                </table>
+                
+                <div class="total">
+                    {{totalLabel}} {{totalAmount}} EUR
+                </div>
+            </div>
+            
+            {{additionalInstructionsHtml}}
+            
+            <p>Če imate kakršnakoli vprašanja, nas prosim kontaktirajte na info@fritid.si</p>
+        </div>
+        <div class="footer">
+            <p>Hvala, ker nakupujete pri Fritid!</p>
+        </div>
+    </div>
+</body>
+</html>

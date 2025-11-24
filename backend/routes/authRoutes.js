@@ -12,11 +12,11 @@ router.post('/register', async (req, res) => {
         // Check if user already exists`
         const existingUser = await User.findByEmail(email);
         if (existingUser && existingUser.passwordHash != null) {
-            return res.status(400).json({ error: 'User with this email already exists' });
+            return res.status(409).json({ message: 'User with this email already exists' });
         } else if (existingUser && existingUser.passwordHash == null) {
             // User exists but has no password, initialize password
             await existingUser.initPassword(password);
-            
+
             // Generate JWT token
             const token = jwt.sign(
                 { id: existingUser.id, email: existingUser.email, role: existingUser.role },
@@ -32,14 +32,14 @@ router.post('/register', async (req, res) => {
         } else {
             // Create new user
             const user = await User.create({ firstName, lastName, email, password });
-            
+
             // Generate JWT token
             const token = jwt.sign(
                 { id: user.id, email: user.email, role: user.role },
                 process.env.JWT_SECRET,
                 { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
             );
-            
+
             res.status(201).json({
                 message: 'User created successfully',
                 user: user.toJSON(),

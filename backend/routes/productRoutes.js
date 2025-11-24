@@ -1,6 +1,7 @@
 const express = require('express');
 const Product = require('../models/Product');
 const { authenticateToken } = require('../middleware/auth');
+const adminAuth = require('../middleware/adminAuth');
 
 const router = express.Router();
 
@@ -61,7 +62,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Create product (admin only)
-router.post('/', async (req, res) => {
+router.post('/', adminAuth, async (req, res) => {
     try {
         const product = await Product.create(req.body);
         res.status(201).json(product);
@@ -72,7 +73,7 @@ router.post('/', async (req, res) => {
 });
 
 // Update product (admin only)
-router.put('/admin/:id', async (req, res) => {
+router.put('/admin/:id', adminAuth, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
@@ -103,7 +104,7 @@ router.put('/admin/:id', async (req, res) => {
 });
 
 // Delete product (admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
     try {
         const deleted = await Product.delete(req.params.id);
         if (!deleted) {

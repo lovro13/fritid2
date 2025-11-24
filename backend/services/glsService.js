@@ -182,7 +182,7 @@ class GlsService {
             // Try to split address into street and house number
             let street = order.shippingAddress;
             let houseNumber = '';
-            
+
             // Common patterns: "Street 123", "Street 123a", "Street name 45"
             const addressMatch = order.shippingAddress.match(/^(.+?)\s+(\d+[a-zA-Z]?)$/);
             if (addressMatch) {
@@ -195,7 +195,7 @@ class GlsService {
                 Street: street,
                 HouseNumber: houseNumber,
                 City: order.shippingCity,
-                ZipCode: order.shippingPostalCode,
+                ZipCode: String(order.shippingPostalCode),
                 CountryIsoCode: 'SI',
                 ContactPhone: order.shippingPhoneNumber,
                 ContactEmail: order.shippingEmail
@@ -203,7 +203,7 @@ class GlsService {
 
             // Determine if COD (Cash on Delivery) should be used
             const isCOD = order.paymentMethod === 'DELIVERY';
-            
+
             // Generate label
             const result = await this.printLabel({
                 ClientReference: `ORDER-${order.id}`,
@@ -221,7 +221,7 @@ class GlsService {
 
             // Save the label
             const filename = `gls-label-order-${order.id}.pdf`;
-            const labelPath = this.saveLabelToFile(result.pdfBuffer, filename);
+            const labelPath = await this.saveLabelToFile(result.pdfBuffer, filename);
 
             return {
                 success: true,
@@ -249,16 +249,16 @@ class GlsService {
      * @param {string} filename - Output filename
      * @returns {string} Full path to saved file
      */
-    saveLabelToFile(pdfBuffer, filename = 'gls-label.pdf') {
+    async saveLabelToFile(pdfBuffer, filename = 'gls-label.pdf') {
         const outputPath = path.join(__dirname, '..', 'uploads', 'gls-labels', filename);
-        
+
         // Ensure directory exists
         const dir = path.dirname(outputPath);
         if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+            await fs.promises.mkdir(dir, { recursive: true });
         }
 
-        fs.writeFileSync(outputPath, pdfBuffer);
+        await fs.promises.writeFile(outputPath, pdfBuffer);
         return outputPath;
     }
 

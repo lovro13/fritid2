@@ -75,7 +75,7 @@ router.post('/', async (req, res) => {
         // CREATE USER IF NOT EXISTS OR GET USER ID If EXISTS
         let user = await User.findByEmail(personInfo.email);
         let userId;
-        
+
         if (user != null) {
             logger.info("Found existing user via email", user.id);
             userId = user.id;
@@ -88,11 +88,11 @@ router.post('/', async (req, res) => {
                 password: null, // Leave password null
                 role: 'user'
             });
-            
+
             userId = user.id;
             logger.info("Created new user with ID:", userId);
         }
-        
+
         // Update user address info
         user.address = personInfo.address;
         user.postalCode = personInfo.postalCode;
@@ -111,7 +111,7 @@ router.post('/', async (req, res) => {
         let paymentMethod = 'DELIVERY'; // Default
         if (typeOfOrder === 'upn' || typeOfOrder === 'UPN') {
             paymentMethod = 'UPN';
-        } else if (typeOfOrder === 'cash'  || typeOfOrder === 'delivery') {
+        } else if (typeOfOrder === 'cash' || typeOfOrder === 'delivery') {
             paymentMethod = 'DELIVERY';
         }
         logger.info("Mapped payment type:", typeOfOrder, "->", paymentMethod);
@@ -130,7 +130,7 @@ router.post('/', async (req, res) => {
             shippingCity: personInfo.city,
             shippingPostalCode: personInfo.postalCode,
             paymentMethod: paymentMethod
-        });        
+        });
         if (!order) {
             throw new Error('Failed to create order.');
         }
@@ -144,18 +144,22 @@ router.post('/', async (req, res) => {
             if (!product) {
                 throw new Error(`Product with ID ${item.product.id} not found in database`);
             }
-            cartItemsProducts.push(product);
+            // Combine product details from DB with quantity from request
+            cartItemsProducts.push({
+                ...product,
+                quantity: item.quantity
+            });
         }
         logger.info("All cart items verified against database products");
-        const minimax_invoice_result = await create_order_and_send_issue_to_mmax({order, user, cartItemsProducts });
-        
+        const minimax_invoice_result = await create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts });
+
         // Check if minimax integration failed
         if (minimax_invoice_result.invoiceError) {
             logger.error('Minimax integration failed for order:', minimax_invoice_result.orderId, minimax_invoice_result.invoiceError);
-            return res.status(500).json({ 
-                error: 'Order created but invoice generation failed', 
+            return res.status(500).json({
+                error: 'Order created but invoice generation failed',
                 details: minimax_invoice_result.invoiceError,
-                orderId: minimax_invoice_result.orderId 
+                orderId: minimax_invoice_result.orderId
             });
         }
 
@@ -179,7 +183,7 @@ router.post('/', async (req, res) => {
 
         logger.info("Created minimax invoice for order: ", order.id)
         logger.info("order.paymentMethod: ", order.paymentMethod);
-        
+
         // Send email notifications
         await MailService.sendOwnerOrderNotification(order, glsLabelPath);
         logger.info("Payment method on order and received", order.paymentMethod, personInfo.paymentMethod);
@@ -188,7 +192,7 @@ router.post('/', async (req, res) => {
         } else {
             await MailService.sendOrderConfirmation(order, false, null);
         }
-            
+
 
         res.status(201).json(minimax_invoice_result);
         return;
@@ -202,7 +206,7 @@ router.post('/', async (req, res) => {
 router.put('/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
-        
+
         if (!Object.values(Order.STATUS).includes(status)) {
             return res.status(400).json({ error: 'Invalid order status' });
         }
