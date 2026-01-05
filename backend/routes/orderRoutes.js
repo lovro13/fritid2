@@ -136,7 +136,7 @@ router.post('/', async (req, res) => {
         }
         logger.info("Order created successfully with ID:", order.id);
 
-        // Check cart items against database products
+        // Check cart items against database products and create order items
         const cartItemsProducts = []
         logger.info("Verifying cart items against database products");
         for (const item of cartItems) {
@@ -144,13 +144,22 @@ router.post('/', async (req, res) => {
             if (!product) {
                 throw new Error(`Product with ID ${item.product.id} not found in database`);
             }
+            
+            // Create order item in database
+            await OrderItem.create({
+                orderId: order.id,
+                productId: product.id,
+                quantity: item.quantity,
+                price: product.price
+            });
+            
             // Combine product details from DB with quantity from request
             cartItemsProducts.push({
                 ...product,
                 quantity: item.quantity
             });
         }
-        logger.info("All cart items verified against database products");
+        logger.info("All cart items verified and order items created in database");
         const minimax_invoice_result = await create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts });
 
         // Check if minimax integration failed

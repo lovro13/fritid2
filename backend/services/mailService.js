@@ -55,6 +55,7 @@ class MailService {
             }
 
             // Generate order items HTML
+            const subtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const orderItemsHtml = order.orderItems.map(item => `
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">
@@ -70,7 +71,7 @@ class MailService {
                         ${(item.price * item.quantity).toFixed(2)} EUR
                     </td>
                 </tr>
-            `).join('');
+            `).join('') + `<tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Vmesni seštevek:</strong></td><td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} EUR</strong></td></tr><tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Dostava:</strong></td><td style="padding: 10px; text-align: right;"><strong>5.99 EUR</strong></td></tr>`;
 
             // Prepare template variables
             const title = upn ? '📄 Račun za naročilo' : 'Potrditev naročila';
@@ -129,7 +130,7 @@ class MailService {
                 .replace('{{city}}', order.shippingCity)
                 .replace('{{orderItemsHtml}}', orderItemsHtml)
                 .replace('{{totalLabel}}', upn ? 'Za plačilo:' : 'Skupaj:')
-                .replace('{{totalAmount}}', order.totalAmount.toFixed(2))
+                .replace('{{totalAmount}}', (order.totalAmount + 5.99).toFixed(2))
                 .replace('{{additionalInstructionsHtml}}', additionalInstructionsHtml);
 
             // Plain text version (simplified for brevity, ideally also a template)
@@ -187,9 +188,10 @@ class MailService {
             }
 
             // Generate order items text for owner
+            const subtotalOwner = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const orderItemsText = order.orderItems.map(item =>
                 `${item.productName}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`
-            ).join('\n\n');
+            ).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: 5.99 EUR`;
 
             // Replace variables in template
             let htmlContent = this.templates.ownerNotification
