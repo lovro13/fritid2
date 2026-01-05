@@ -64,7 +64,12 @@
       <h3>UPN Plačilo</h3>
       <p>Ko plačate vam pošljemo paket.</p>
       <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
-      <button class="confirm-button" (click)="confirmPayment()">Potrdi naročilo</button>
+      <button class="confirm-button" (click)="confirmPayment()" [disabled]="isProcessing">
+        {{ isProcessing ? 'Obdelava naročila...' : 'Potrdi naročilo' }}
+      </button>
+      @if (isProcessing) {
+        <p class="processing-message">⏳ Naročilo se obdeluje, prosimo počakajte...</p>
+      }
     </div>
   </div>
   }
@@ -77,7 +82,12 @@
       <h3>Plačilo po prevzetju</h3>
       <p>Pri prevzemu paketa boste plačali znesek.</p>
       <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
-      <button class="confirm-button" (click)="confirmPayment()">Potrdi naročilo</button>
+      <button class="confirm-button" (click)="confirmPayment()" [disabled]="isProcessing">
+        {{ isProcessing ? 'Obdelava naročila...' : 'Potrdi naročilo' }}
+      </button>
+      @if (isProcessing) {
+        <p class="processing-message">⏳ Naročilo se obdeluje, prosimo počakajte...</p>
+      }
     </div>
   </div>
   }

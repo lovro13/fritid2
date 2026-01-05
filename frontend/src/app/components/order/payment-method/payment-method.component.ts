@@ -26,6 +26,7 @@ export class PaymentMethodComponent implements OnInit {
 
   selectedMethod: string | null = null;
   selectedBank: string = "";
+  isProcessing: boolean = false;
 
   // Order summary properties
   subtotal: number = 0;
@@ -88,6 +89,8 @@ export class PaymentMethodComponent implements OnInit {
 
   confirmPayment() {
       console.log('Payment confirmed');
+      this.isProcessing = true;
+      
       if (this.selectedMethod == 'cash')  {
         this.paymentComplete.emit('cash');
       } else {
@@ -111,10 +114,13 @@ export class PaymentMethodComponent implements OnInit {
         this.http.post(`${environment.apiBase}/orders`, payload).subscribe({
           next: (response) => {
             console.log('Checkout success', response);
+            this.isProcessing = false;
             this.router.navigate(['/thank-you']);
           },
           error: (err) => {
             console.error('Checkout failed', err);
+            this.isProcessing = false;
+            alert('Napaka pri obdelavi naročila. Prosimo poskusite znova.');
           }
         });
       });

@@ -614,3 +614,31 @@ h2 {
     transform: translateY(-50%) scale(1.1); 
   }
 }
+
+// Processing message styling
+.processing-message {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);
+  border-radius: 10px;
+  color: #856404;
+  font-weight: 500;
+  text-align: center;
+  animation: pulse-glow 2s ease-in-out infinite;
+  box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.2);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.4);
+  }
+}
+
+.confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
