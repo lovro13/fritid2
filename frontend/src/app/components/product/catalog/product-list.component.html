@@ -26,10 +26,9 @@
 </div>
 
 <!-- Product Categories Section -->
-<div class="categories-section">
+<!-- <div class="categories-section">
     <h2>Kategorije izdelkov</h2>
     <div class="categories-container">
-        <!-- Always show "All Products" first -->
         <div class="category-item"
              [class.active]="selectedCategory === 'all'"
              (click)="filterByCategory('all')">
@@ -41,8 +40,6 @@
             <h3>{{ getCategoryDisplayName('all') }} <span class="count">({{ getCategoryCount('all') }})</span></h3>
             <p>{{ getCategoryDescription('all') }}</p>
         </div>
-        
-        <!-- Dynamically show all available categories -->
         <div *ngFor="let category of availableCategories; trackBy: trackByCategory" 
              class="category-item"
              [class.active]="selectedCategory === category"
@@ -55,8 +52,6 @@
             <h3>{{ getCategoryDisplayName(category) }} <span class="count">({{ getCategoryCount(category) }})</span></h3>
             <p>{{ getCategoryDescription(category) }}</p>
         </div>
-        
-        <!-- Always show "Others" last if there are uncategorized products -->
         <div *ngIf="getCategoryCount('others') > 0"
              class="category-item"
              [class.active]="selectedCategory === 'others'"
@@ -70,7 +65,7 @@
             <p>{{ getCategoryDescription('others') }}</p>
         </div>
     </div>
-</div>
+</div> -->
 
 <!-- Products Section -->
 <div class="products-section">
