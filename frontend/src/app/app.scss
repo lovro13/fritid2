@@ -9,6 +9,11 @@
 }
 
 // Admin link styling
+.admin-links {
+  display: flex;
+  gap: 0.8rem;
+}
+
 .admin-link {
   background: linear-gradient(135deg, #ff9800 0%, #e65100 100%) !important;
   color: white !important;

@@ -10,21 +10,17 @@ const MailService = require('../services/mailService');
 const glsService = require('../services/glsService');
 const logger = require('../logger');
 const path = require('path');
+const { log } = require('console');
 
 const router = express.Router();
 
 // Get all orders
 router.get('/', async (req, res) => {
     try {
+        logger.info('Fetching all orders');
         const orders = await Order.findAll();
-        // Load order items for each order
-        const ordersWithItems = await Promise.all(
-            orders.map(async (order) => {
-                await order.loadOrderItems();
-                return order;
-            })
-        );
-        res.json(ordersWithItems);
+        logger.info(`Fetched ${orders.length} orders`);
+        res.json(orders);
     } catch (error) {
         console.error('Error fetching orders:', error);
         res.status(500).json({ error: 'Failed to fetch orders' });

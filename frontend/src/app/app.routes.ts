@@ -8,6 +8,7 @@ import { PaymentMethodComponent } from './components/order/payment-method/paymen
 import { ThankYouComponent } from './components/order/thank-you/thank-you.component';
 import { AuthComponent } from './components/auth/auth.component';
 import { ProductManagementComponent } from './components/admin/product-management/product-management.component';
+import { OrdersManagementComponent } from './components/admin/orders-management/orders-management.component';
 import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [ 
@@ -22,6 +23,11 @@ export const routes: Routes = [
   { 
     path: 'admin/products', 
     component: ProductManagementComponent,
+    canActivate: [adminGuard] 
+  },
+  { 
+    path: 'admin/orders', 
+    component: OrdersManagementComponent,
     canActivate: [adminGuard] 
   },
   { path: '**', redirectTo: '' }

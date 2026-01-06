@@ -16,7 +16,10 @@
     <!-- Authentication section -->
     <ng-container *ngIf="user$ | async as user; else authButtons">
       <div class="user-section">
-        <a *ngIf="user.role === 'admin'" [routerLink]="['/admin/products']" class="admin-link">Admin</a>
+        <div class="admin-links" *ngIf="user.role === 'admin'">
+          <a [routerLink]="['/admin/products']" class="admin-link">Izdelki</a>
+          <a [routerLink]="['/admin/orders']" class="admin-link">Naročila</a>
+        </div>
         <span class="user-greeting">Pozdravljeni, {{ user.name }}!</span>
         <button class="logout-btn" (click)="logout()">
           <span class="btn-icon">🚪</span>

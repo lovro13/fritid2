@@ -42,8 +42,50 @@ class Order {
 
     static async findAll() {
         const pool = getPool();
-        const [rows] = await pool.execute('SELECT * FROM orders ORDER BY created_at DESC');
-        return rows.map(row => new Order(row));
+        
+        // Get all orders
+        const [orderRows] = await pool.execute('SELECT * FROM orders ORDER BY created_at DESC');
+        const orders = orderRows.map(row => new Order(row));
+        
+        if (orders.length === 0) {
+            return orders;
+        }
+        
+        // Get all order IDs
+        const orderIds = orders.map(order => order.id);
+        
+        // Load all order items in a single query
+        const [itemRows] = await pool.execute(
+            `SELECT oi.*, p.name as product_name, p.image_url as product_image_url 
+             FROM order_items oi
+             JOIN products p ON oi.product_id = p.id 
+             WHERE oi.order_id IN (${orderIds.map(() => '?').join(',')})`,
+            orderIds
+        );
+        
+        // Group items by order_id
+        const itemsByOrderId = {};
+        itemRows.forEach(row => {
+            if (!itemsByOrderId[row.order_id]) {
+                itemsByOrderId[row.order_id] = [];
+            }
+            itemsByOrderId[row.order_id].push({
+                id: row.id,
+                product_id: row.product_id,
+                product_name: row.product_name,
+                product_image_url: row.product_image_url,
+                quantity: row.quantity,
+                price: parseFloat(row.price),
+                color: row.color || null
+            });
+        });
+        
+        // Assign items to their respective orders
+        orders.forEach(order => {
+            order.orderItems = itemsByOrderId[order.id] || [];
+        });
+        
+        return orders;
     }
 
     static async findById(id) {
@@ -120,9 +162,9 @@ class Order {
         
         this.orderItems = rows.map(row => ({
             id: row.id,
-            productId: row.product_id,
-            productName: row.product_name,
-            productImageUrl: row.product_image_url,
+            product_id: row.product_id,
+            product_name: row.product_name,
+            product_image_url: row.product_image_url,
             quantity: row.quantity,
             price: parseFloat(row.price),
             color: row.color || null

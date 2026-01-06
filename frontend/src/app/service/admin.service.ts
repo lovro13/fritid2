@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Product } from '../models/product.model';
+import { Order } from '../models/order.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({
@@ -10,6 +11,7 @@ import { environment } from '../../environments/environment';
 export class AdminService {
   private http = inject(HttpClient);
   private adminApiUrl = `${environment.apiBase}/admin`;
+  private ordersApiUrl = `${environment.apiBase}/orders`;
 
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(`${this.adminApiUrl}/products`);
@@ -25,5 +27,9 @@ export class AdminService {
 
   deleteProduct(id: number): Observable<any> {
     return this.http.delete(`${this.adminApiUrl}/products/${id}`);
+  }
+
+  getAllOrders(): Observable<Order[]> {
+    return this.http.get<Order[]>(this.ordersApiUrl);
   }
 }
