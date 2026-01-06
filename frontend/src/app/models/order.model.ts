@@ -16,8 +16,8 @@ export interface Order {
   created_at: string;
   createdAt: string;
   updated_at: string;
-  order_items: OrderItem[];
-  orderItems: OrderItem[];
+  order_items?: OrderItem[];
+  orderItems?: OrderItem[];
 }
 
 export interface OrderItem {
