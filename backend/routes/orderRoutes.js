@@ -150,8 +150,10 @@ router.post('/', async (req, res) => {
                 orderId: order.id,
                 productId: product.id,
                 quantity: item.quantity,
-                price: product.price
+                price: product.price,
+                color: item.selectedColor || null
             });
+            logger.info(`Created order item for product ${product.id} with color: ${item.selectedColor}`);
             
             // Combine product details from DB with quantity from request
             cartItemsProducts.push({

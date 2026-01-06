@@ -78,7 +78,7 @@ router.put('/products/:id', adminAuth, async (req, res) => {
             description: description !== undefined ? description : product.description,
             price: price !== undefined ? parseFloat(price) : product.price,
             image_url: image_url !== undefined ? image_url : product.image_url,
-            colors: colors !== undefined ? colors : product.colors,
+            colors: colors !== undefined ? (Array.isArray(colors) ? JSON.stringify(colors) : colors) : product.colors,
             category: category !== undefined ? category : product.category,
             stock_quantity: stock_quantity !== undefined ? parseInt(stock_quantity) : product.stock_quantity,
             is_active: is_active !== undefined ? Boolean(is_active) : product.is_active

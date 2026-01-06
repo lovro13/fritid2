@@ -1,2 +1,1 @@
 - handle COLORS
-- loading for when it is making order cuz it takes few seconds

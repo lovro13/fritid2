@@ -7,6 +7,7 @@ class OrderItem {
         this.productId = orderItemData.product_id;
         this.quantity = orderItemData.quantity;
         this.price = parseFloat(orderItemData.price);
+        this.color = orderItemData.color || null;
     }
 
     static async findByOrderId(orderId) {
@@ -20,11 +21,11 @@ class OrderItem {
 
     static async create(orderItemData) {
         const pool = getPool();
-        const { orderId, productId, quantity, price } = orderItemData;
+        const { orderId, productId, quantity, price, color } = orderItemData;
 
         const [result] = await pool.execute(
-            'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
-            [orderId, productId, quantity, price]
+            'INSERT INTO order_items (order_id, product_id, quantity, price, color) VALUES (?, ?, ?, ?, ?)',
+            [orderId, productId, quantity, price, color || null]
         );
 
         return new OrderItem({
@@ -32,7 +33,8 @@ class OrderItem {
             order_id: orderId,
             product_id: productId,
             quantity,
-            price
+            price,
+            color
         });
     }
 
@@ -42,8 +44,8 @@ class OrderItem {
         
         for (const item of orderItems) {
             const [result] = await pool.execute(
-                'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES (?, ?, ?, ?)',
-                [item.orderId, item.productId, item.quantity, item.price]
+                'INSERT INTO order_items (order_id, product_id, quantity, price, color) VALUES (?, ?, ?, ?, ?)',
+                [item.orderId, item.productId, item.quantity, item.price, item.color || null]
             );
             
             createdItems.push(new OrderItem({
@@ -51,7 +53,8 @@ class OrderItem {
                 order_id: item.orderId,
                 product_id: item.productId,
                 quantity: item.quantity,
-                price: item.price
+                price: item.price,
+                color: item.color
             }));
         }
         

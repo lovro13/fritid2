@@ -12,8 +12,6 @@
 - [ ] All products display correctly with images
 - [ ] Product cards show: name, description, price, image
 - [ ] Product prices display with correct currency formatting
-- [ ] **Search functionality** works correctly
-- [ ] **Price range filter** works (if implemented)
 - [ ] Products have color options displayed (if applicable)
 - [ ] "Add to Cart" button is visible and clickable on all products
 - [ ] Pagination works (if implemented)

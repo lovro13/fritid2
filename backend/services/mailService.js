@@ -59,7 +59,7 @@ class MailService {
             const orderItemsHtml = order.orderItems.map(item => `
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                        ${item.productName}
+                        ${item.productName}${item.color ? ` - ${item.color}` : ''}
                     </td>
                     <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">
                         ${item.quantity}

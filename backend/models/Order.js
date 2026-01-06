@@ -124,7 +124,8 @@ class Order {
             productName: row.product_name,
             productImageUrl: row.product_image_url,
             quantity: row.quantity,
-            price: parseFloat(row.price)
+            price: parseFloat(row.price),
+            color: row.color || null
         }));
         
         return this;
