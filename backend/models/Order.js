@@ -71,9 +71,9 @@ class Order {
             }
             itemsByOrderId[row.order_id].push({
                 id: row.id,
-                product_id: row.product_id,
-                product_name: row.product_name,
-                product_image_url: row.product_image_url,
+                productId: row.product_id,
+                productName: row.product_name,
+                productImageUrl: row.product_image_url,
                 quantity: row.quantity,
                 price: parseFloat(row.price),
                 color: row.color || null
@@ -162,9 +162,9 @@ class Order {
         
         this.orderItems = rows.map(row => ({
             id: row.id,
-            product_id: row.product_id,
-            product_name: row.product_name,
-            product_image_url: row.product_image_url,
+            productId: row.product_id,
+            productName: row.product_name,
+            productImageUrl: row.product_image_url,
             quantity: row.quantity,
             price: parseFloat(row.price),
             color: row.color || null

@@ -1,1 +1,3 @@
-- handle COLORS
+TODO:
+- samo slovenski naslovi, protection pred boti (some sort of fritid protection)
+- mail verification?
