@@ -2,17 +2,13 @@
   <div class="left-info"></div>
   <div class="center-logo">
     <a routerLink="/" class="logo-link">
-      <img 
-      src="assets/fritid_logo2.jpeg" 
-      alt="Fritid Shop Logo"
-      class="logo"
-      >
+      <img src="assets/fritid_logo2.jpeg" alt="Fritid Shop Logo" class="logo">
     </a>
   </div>
   <nav>
     <a [routerLink]="['/']">Domov</a>
     <a [routerLink]="['/cart']">Košarica ({{ cartItemCount }})</a>
-    
+
     <!-- Authentication section -->
     <ng-container *ngIf="user$ | async as user; else authButtons">
       <div class="user-section">
@@ -27,7 +23,7 @@
         </button>
       </div>
     </ng-container>
-    
+
     <ng-template #authButtons>
       <a [routerLink]="['/auth']" class="auth-link">
         <span class="btn-icon">👤</span>
@@ -36,6 +32,7 @@
     </ng-template>
   </nav>
 </header>
+
 <body>
   <div class="body-container">
     <router-outlet></router-outlet>
@@ -43,3 +40,4 @@
 </body>
 
 <app-footer></app-footer>
+<app-toast></app-toast>

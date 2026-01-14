@@ -3,7 +3,8 @@ import { UserService } from './service/user.service';
 
 import { User } from './models/user.model';
 import { Router, RouterLink, RouterOutlet, NavigationEnd } from '@angular/router';
-import { FooterComponent } from './components/shared//footer/footer.component';
+import { FooterComponent } from './components/shared/footer/footer.component';
+import { ToastComponent } from './components/shared/toast/toast.component';
 import { Observable } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { ProductsService } from './service/products.service';
@@ -13,7 +14,7 @@ import { filter } from 'rxjs/operators';
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrls: ['./app.scss'],
-  imports: [RouterOutlet, RouterLink, FooterComponent, CommonModule]
+  imports: [RouterOutlet, RouterLink, FooterComponent, CommonModule, ToastComponent]
 })
 export class App implements OnInit {
   user$: Observable<User | null>;

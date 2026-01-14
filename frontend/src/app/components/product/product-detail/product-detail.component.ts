@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ProductsService } from "../../../service/products.service";
 import { Product } from '../../../models/product.model'
@@ -20,12 +20,12 @@ export class ProductDetailComponent implements OnInit {
   loading: boolean = true;
   error: string | null = null;
   image_url = '';
-  
+
   constructor(
     private route: ActivatedRoute,
     private productService: ProductsService,
   ) { }
-  
+
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id != null) {
@@ -57,13 +57,13 @@ export class ProductDetailComponent implements OnInit {
       console.error("Product id not found in route");
     }
   }
-  
+
   addToCart(product: Product) {
     this.productService.addItemToCart(product, this.selectedQuantity, this.selectedColor);
     // Reset quantity after adding to cart
     this.selectedQuantity = 1;
   }
-  
+
   increaseQuantity() {
     if (this.selectedQuantity < 99) {
       this.selectedQuantity++;
@@ -92,7 +92,7 @@ export class ProductDetailComponent implements OnInit {
       'vijolična': '#9C27B0',
       'roza': '#E91E63'
     };
-    
+
     return colorMap[color.toLowerCase()] || '#999999';
   }
 }

@@ -1,6 +1,7 @@
-TODO:
+TODO later when deploying:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
-- mail verification?
-- telefon popštna številka ko se prijavim, še več stvari samo iz slovenije
+TODO soon:
 - ko nekaj dodam v košarico želim sporočilo
 - hvala za naročilo page fix
+TODO maybe:
+- mail verification?

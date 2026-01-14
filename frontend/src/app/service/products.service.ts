@@ -1,16 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of } from 'rxjs';
+import { Observable, of, BehaviorSubject } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { Product } from '../models/product.model';
 import { CartItem } from '../models/cart.model';
-import { BehaviorSubject } from 'rxjs';
+import { NotificationService } from './notification.service';
 
 
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
   private http = inject(HttpClient);
+  private notificationService = inject(NotificationService);
   private apiUrl = `${environment.apiBase}/products`;
 
   private products: Product[] = [];
@@ -54,6 +55,7 @@ export class ProductsService {
     }
     this.cartItemsSubject.next(currentItems);
     this.saveCart();
+    this.notificationService.showSuccess(`Izdelek "${product.name}" je bil dodan v košarico!`);
     console.log("Item added to cart:", product, quantity, selectedColor);
   }
 
@@ -74,7 +76,7 @@ export class ProductsService {
       cartItem.product.id === item.product.id &&
       cartItem.selectedColor === item.selectedColor
     );
-    
+
     if (existingItem) {
       existingItem.quantity = newQuantity;
       this.cartItemsSubject.next(currentItems);
