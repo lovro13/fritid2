@@ -1,4 +1,4 @@
 export const environment = {
   production: false,
-  apiBase: 'http://localhost:8080/api'   // klici: `${environment.apiBase}/products`
+  apiBase: '/api'   // Proxied to localhost:8080 via proxy.conf.json
 };

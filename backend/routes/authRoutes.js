@@ -1,11 +1,28 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const logger = require('../logger');
 const router = express.Router();
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', [
+    body('email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
+    body('password')
+        .isLength({ min: 8 })
+        .withMessage('Password must be at least 8 characters')
+        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+        .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+    body('firstName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('First name is required'),
+    body('lastName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('Last name is required')
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn(`Registration validation failed for email: ${req.body.email || 'unknown'} from IP: ${req.ip}. Errors: ${JSON.stringify(errors.array())}`);
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { firstName, lastName, email, password } = req.body;
         logger.info(`Attempting to register user with email: ${email}, firstName: ${firstName}, lastName: ${lastName}`);
@@ -24,10 +41,17 @@ router.post('/register', async (req, res) => {
                 { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
             );
 
+            // Set HttpOnly cookie
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+                sameSite: 'lax', // Relaxed for better compatibility (especially local dev)
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            });
+
             return res.status(200).json({
                 message: 'Password set successfully',
-                user: existingUser.toJSON(),
-                token
+                user: existingUser.toJSON()
             });
         } else {
             // Create new user
@@ -40,36 +64,57 @@ router.post('/register', async (req, res) => {
                 { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
             );
 
+            // Set HttpOnly cookie
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 24 * 60 * 60 * 1000
+            });
+
             res.status(201).json({
                 message: 'User created successfully',
-                user: user.toJSON(),
-                token
+                user: user.toJSON()
             });
         }
     } catch (error) {
         console.error('Registration error:', error);
+        logger.warn(`Failed registration attempt for email: ${req.body.email} from IP: ${req.ip}`);
         res.status(500).json({ error: 'Failed to create user' });
     }
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', [
+    body('email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
+    body('password').notEmpty().withMessage('Password is required')
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn(`Login validation failed for email: ${req.body.email || 'unknown'} from IP: ${req.ip}. Errors: ${JSON.stringify(errors.array())}`);
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { email, password } = req.body;
         // Find user by email
         const user = await User.findByEmail(email);
         if (!user) {
+            logger.warn(`Failed login attempt for non-existent email: ${email} from IP: ${req.ip}`);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
         // Check if user has a password set (prevent login for users without password)
         if (!user.passwordHash) {
+            logger.warn(`Login attempt for passwordless account: ${email} from IP: ${req.ip}`);
             return res.status(401).json({ error: 'Account requires password setup' });
         }
 
         // Validate password
         const isValidPassword = await user.validatePassword(password);
         if (!isValidPassword) {
+            logger.warn(`Failed login attempt for email: ${email} from IP: ${req.ip}`);
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
@@ -80,11 +125,19 @@ router.post('/login', async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        // Set HttpOnly cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
+        logger.info(`Successful login for user: ${user.id} from IP: ${req.ip}`);
         res.json({
             success: true,
             message: 'Login successful',
-            user: user.toJSON(),
-            token
+            user: user.toJSON()
         });
     } catch (error) {
         console.error('Login error:', error);
@@ -95,17 +148,30 @@ router.post('/login', async (req, res) => {
 // Verify token
 router.post('/verify', (req, res) => {
     try {
-        const { token } = req.body;
+        // Only accept token from HttpOnly cookie
+        const token = req.cookies.token;
 
         if (!token) {
-            return res.status(400).json({ error: 'Token is required' });
+            logger.warn(`Verify failed: No token provided from IP: ${req.ip}`);
+            return res.status(401).json({ valid: false, error: 'No token provided' });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         res.json({ valid: true, userId: decoded.id, role: decoded.role });
     } catch (error) {
+        logger.warn(`Verify failed: Invalid token from IP: ${req.ip}. Error: ${error.message}`);
         res.status(401).json({ valid: false, error: 'Invalid token' });
     }
+});
+
+// Logout
+router.post('/logout', (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+    res.json({ success: true, message: 'Logged out successfully' });
 });
 
 module.exports = router;

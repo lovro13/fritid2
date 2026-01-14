@@ -1,11 +1,12 @@
 const express = require('express');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
+const adminAuth = require('../middleware/adminAuth');
 
 const router = express.Router();
 
 // Get all users
-router.get('/', async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
     try {
         const users = await User.findAll();
         res.json(users.map(user => user.toJSON()));
@@ -16,8 +17,13 @@ router.get('/', async (req, res) => {
 });
 
 // Get user by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
     try {
+        // Check ownership: users can only view their own profile, admins can view all
+        if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -30,7 +36,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Get user by email
-router.get('/email/:email', async (req, res) => {
+router.get('/email/:email', adminAuth, async (req, res) => {
     try {
         const user = await User.findByEmail(req.params.email);
         if (!user) {
@@ -54,28 +60,18 @@ router.get('/exists/email/:email', async (req, res) => {
     }
 });
 
-// Create user
-router.post('/', async (req, res) => {
-    try {
-        const { firstName, lastName, email, password } = req.body;
-
-        // Check if user already exists
-        const existingUser = await User.findByEmail(email);
-        if (existingUser) {
-            return res.status(400).json({ error: 'User with this email already exists' });
-        }
-
-        const user = await User.create({ firstName, lastName, email, password });
-        res.status(201).json(user.toJSON());
-    } catch (error) {
-        console.error('Error creating user:', error);
-        res.status(500).json({ error: 'Failed to create user' });
-    }
+// Create user - Disabled, use /api/auth/register instead
+router.post('/', (req, res) => {
+    res.status(403).json({ error: 'Direct user creation is not allowed. Please use /api/auth/register' });
 });
 
 // Update user
 router.put('/:id', authenticateToken, async (req, res) => {
     try {
+        // Check ownership: users can only update their own profile, admins can update all
+        if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -98,6 +94,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
 // Update user profile
 router.put('/:id/profile', authenticateToken, async (req, res) => {
     try {
+        // Check ownership: users can only update their own profile, admins can update all
+        if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
@@ -121,6 +121,10 @@ router.put('/:id/profile', authenticateToken, async (req, res) => {
 // Delete user
 router.delete('/:id', authenticateToken, async (req, res) => {
     try {
+        // Check ownership: users can only delete their own profile, admins can delete all
+        if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
         const deleted = await User.delete(req.params.id);
         if (!deleted) {
             return res.status(404).json({ error: 'User not found' });

@@ -25,20 +25,10 @@ export class UserService {
   public token$ = this.tokenSubject.asObservable();
   public isInitialized$ = this.isInitialized.asObservable();
 
-  private readonly TOKEN_KEY = 'token';
   private readonly USER_KEY = 'user';
 
-  getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY);
-  }
-
-  setToken(token: string): void {
-    localStorage.setItem(this.TOKEN_KEY, token);
-  }
-
-  removeToken(): void {
-    localStorage.removeItem(this.TOKEN_KEY);
-  }
+  // Token is now managed by HttpOnly cookies
+  // getToken, setToken, removeToken removed
 
   getUser(): any | null {
     const user = localStorage.getItem(this.USER_KEY);
@@ -54,31 +44,15 @@ export class UserService {
   }
 
   clearAll(): void {
-    this.removeToken();
     this.removeUser();
   }
 
-  isTokenExpired(token: string): boolean {
-    try {
-      if (!token || token.split('.').length !== 3) {
-        return true;
-      }
-      
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      
-      // Add 5 minute buffer to account for clock skew
-      return payload.exp < (currentTime + 300);
-    } catch (error) {
-      console.error('Error checking token expiration:', error);
-      return true;
-    }
-  }
+  // isTokenExpired removed as tokens are HttpOnly
 
   constructor(private http: HttpClient) {
     // Initialize immediately and synchronously
     this.initializeSynchronously();
-    
+
     // Listen for storage changes (e.g., when interceptor clears localStorage)
     window.addEventListener('storage', (event) => {
       if (event.key === 'token' || event.key === 'user') {
@@ -89,55 +63,51 @@ export class UserService {
 
   private initializeSynchronously(): void {
     const storedUser = this.getUser();
-    const storedToken = this.getToken();
-    
-    if (storedUser && storedToken && !this.isTokenExpired(storedToken)) {
-      // Set user state immediately and synchronously
+    console.log('ANTIGRAVITY: Initializing UserService. Stored user:', storedUser);
+
+    // We optimistically set the user if data exists in localStorage
+    if (storedUser) {
+      console.log('ANTIGRAVITY: Restoring user session from localStorage');
       this.userSubject.next(storedUser);
-      this.tokenSubject.next(storedToken);
+      // Verify session via cookie
+      this.validateTokenSilently();
+    } else {
+      console.log('ANTIGRAVITY: No stored user found.');
     }
-    
+
     // Mark as initialized immediately
     this.isInitialized.next(true);
-    
-    // Validate token in background if exists
-    if (storedToken) {
-      setTimeout(() => {
-        this.validateTokenSilently(storedToken);
-      }, 100);
-    }
   }
 
-  private validateTokenSilently(token: string): void {
-    this.validateToken(token).subscribe({
+  private validateTokenSilently(): void {
+    console.log('ANTIGRAVITY: Validating token silently...');
+    this.validateToken().subscribe({
       next: (isValid: boolean) => {
+        console.log('ANTIGRAVITY: Token validation result:', isValid);
         if (!isValid) {
-          console.warn('Token validation failed, logging out user');
-          this.logout();
+          console.warn('ANTIGRAVITY: Token validation failed, logging out user');
+          this.logout(false);
         }
       },
       error: (error) => {
-        console.error('Token validation error:', error);
-        this.logout();
+        console.error('ANTIGRAVITY: Token validation error:', error);
+        this.logout(false);
       }
     });
   }
 
   private handleStorageChange(): void {
     const storedUser = this.getUser();
-    const storedToken = this.getToken();
-    
-    // If token or user was removed, clear the service state
-    if (!storedUser || !storedToken) {
+    console.log('ANTIGRAVITY: Storage changed. New user:', storedUser);
+
+    // If user was removed, clear the service state
+    if (!storedUser) {
       this.userSubject.next(null);
-      this.tokenSubject.next(null);
     }
   }
 
   isLoggedIn(): boolean {
-    const token = this.getToken();
-    const user = this.userSubject.value;
-    return !!(token && user && !this.isTokenExpired(token));
+    return !!this.userSubject.value; // Optimistic check
   }
 
   isReady(): boolean {
@@ -148,12 +118,8 @@ export class UserService {
     return this.userSubject.value;
   }
 
-  validateToken(token: string): Observable<boolean> {
-    if (!token || this.isTokenExpired(token)) {
-      return of(false);
-    }
-    
-    return this.http.post<{ valid: boolean }>(`${environment.apiBase}/auth/verify`, { token })
+  validateToken(): Observable<boolean> {
+    return this.http.post<{ valid: boolean }>(`${environment.apiBase}/auth/verify`, {})
       .pipe(
         map((response: { valid: boolean }) => response.valid),
         catchError((error) => {
@@ -170,7 +136,8 @@ export class UserService {
       { email, password }
     ).pipe(
       tap(res => {
-        if (res.success && res.user && res.token) {
+        if (res.success && res.user) {
+          console.log('ANTIGRAVITY: Login successful, saving user to localStorage');
           const user: User = {
             id: res.user.id,
             email: res.user.email,
@@ -180,9 +147,8 @@ export class UserService {
             role: res.user.role
           };
           this.setUser(user);
-          this.setToken(res.token);
+          // Token is now handled by HttpOnly cookie
           this.userSubject.next(user);
-          this.tokenSubject.next(res.token);
         }
       })
     );
@@ -198,12 +164,17 @@ export class UserService {
       confirmPassword: userData.confirmPassword
     };
     console.log('Registration request:', registrationRequest);
-    
+
     return this.http.post(`${environment.apiBase}/auth/register`, registrationRequest);
   }
 
-  logout(): void {
-    this.clearAll();
+  logout(notifyServer: boolean = true): void {
+    if (notifyServer) {
+      this.http.post(`${environment.apiBase}/auth/logout`, {}).subscribe({
+        error: (err) => console.error('Logout error', err)
+      });
+    }
+    this.removeUser();
     this.userSubject.next(null);
     this.tokenSubject.next(null);
   }

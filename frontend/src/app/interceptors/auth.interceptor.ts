@@ -24,31 +24,26 @@ import { UserService } from '../service/user.service';
  * ```
  */
 export function authInterceptor(request: HttpRequest<unknown>,
-   next: HttpHandlerFn
-  ): Observable<HttpEvent<unknown>> {
+  next: HttpHandlerFn
+): Observable<HttpEvent<unknown>> {
   const router = inject(Router);
   const authService = inject(UserService);
-  
-  // Get the token from the token service
-  const token = authService.getToken();
-  
-  // Clone the request and add authorization header if token exists
-  if (token) {
-    request = request.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`
-      }
-    });
-  }
+
+  // Clone the request to enable credentials (cookies)
+  const modifiedRequest = request.clone({
+    withCredentials: true
+  });
 
   // Handle the request and catch any authentication errors
-  return next(request).pipe(
+  return next(modifiedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
       // If we get a 401 Unauthorized error, clear tokens and redirect
       if (error.status === 401) {
         authService.clearAll();
         router.navigate(['/auth']);
+        return throwError(() => error);
       }
+
       return throwError(() => error);
     })
   );

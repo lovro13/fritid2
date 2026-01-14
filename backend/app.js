@@ -3,6 +3,9 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
+
 const logger = require('./logger');
 
 // Load environment variables
@@ -12,8 +15,8 @@ logger.info(`Loading environment from: ${envPath}`);
 
 // Validate required environment variables
 if (!process.env.JWT_SECRET) {
-    logger.error('FATAL: JWT_SECRET environment variable is not set');
-    process.exit(1);
+  logger.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
 }
 
 if (process.env.JWT_SECRET.length < 32) {
@@ -37,13 +40,24 @@ const PORT = process.env.PORT;
 
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = process.env.FRONTEND_URL; 
+const allowedOrigins = process.env.FRONTEND_URL;
+
+// --- HTTPS Enforcement ---
+if (isProduction) {
+  app.use((req, res, next) => {
+    if (req.header('x-forwarded-proto') !== 'https') {
+      res.redirect(`https://${req.header('host')}${req.url}`);
+    } else {
+      next();
+    }
+  });
+}
 
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.length === 0 && !isProduction) { 
+    if (allowedOrigins.length === 0 && !isProduction) {
       // Allow all origins in dev if FRONTEND_URL is not set
       return callback(null, true);
     }
@@ -53,15 +67,57 @@ const corsOptions = {
       return callback(new Error('Not allowed by CORS'));
     }
   },
+  credentials: true // Allow cookies for CSRF protection
 };
 
 // Middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
 }));
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser());
+
+// --- Rate Limiting ---
+// Global rate limiter for all API routes
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // limit each IP to 300 requests per windowMs (approx 1 per 3 seconds on avg)
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter rate limiter for authentication routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 login attempts per 15 minutes
+  skipSuccessfulRequests: true,
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply rate limiters
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+
 
 // Serve static images with CORS headers
 app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'uploads/images/products')));
@@ -70,33 +126,33 @@ app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'u
 initializeDatabase();
 
 
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
-// The static middleware above handles GET requests, imageRoutes can handle other methods if needed.
 app.use('/api/images', imageRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Fritid Backend is running' });
+  res.json({ status: 'OK', message: 'Fritid Backend is running' });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    logger.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+  logger.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
 });
 
 // 404 handler
 app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(PORT, () => {
-    logger.info(`Server is running on port ${PORT}`);
+  logger.info(`Server is running on port ${PORT}`);
 });
 
 module.exports = app;

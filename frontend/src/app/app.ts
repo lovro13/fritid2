@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { UserService } from './service/user.service';
+
 import { User } from './models/user.model';
 import { Router, RouterLink, RouterOutlet, NavigationEnd } from '@angular/router';
 import { FooterComponent } from './components/shared//footer/footer.component';
@@ -22,7 +23,7 @@ export class App implements OnInit {
   }
 
   constructor(
-    private cartService: ProductsService, 
+    private cartService: ProductsService,
     private authService: UserService,
     private router: Router
   ) {
@@ -30,6 +31,8 @@ export class App implements OnInit {
   }
 
   ngOnInit() {
+
+
     // Scroll to top on route changes
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)

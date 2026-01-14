@@ -1,9 +1,11 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const Order = require('../models/Order');
 const OrderItem = require('../models/OrderItem');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
+const adminAuth = require('../middleware/adminAuth');
 const { createInvoiceForOrder } = require('../services/minimaxService');
 const { create_order_and_send_issue_to_mmax } = require('../services/orderService');
 const MailService = require('../services/mailService');
@@ -15,7 +17,7 @@ const { log } = require('console');
 const router = express.Router();
 
 // Get all orders
-router.get('/', async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
     try {
         logger.info('Fetching all orders');
         const orders = await Order.findAll();
@@ -28,12 +30,18 @@ router.get('/', async (req, res) => {
 });
 
 // Get order by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const order = await Order.findById(req.params.id);
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }
+
+        // Check ownership: users can only view their own orders, admins can view all
+        if (order.userId !== req.user.id && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
         await order.loadOrderItems();
         res.json(order);
     } catch (error) {
@@ -61,7 +69,26 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
 });
 
 // Create order (checkout)
-router.post('/', async (req, res) => {
+router.post('/', [
+    body('personInfo.email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
+    body('personInfo.firstName').trim().isLength({ min: 1, max: 100 }).escape().withMessage('First name is required'),
+    body('personInfo.lastName').trim().isLength({ min: 1, max: 100 }).escape().withMessage('Last name is required'),
+    body('personInfo.address').trim().isLength({ min: 1, max: 200 }).withMessage('Address is required'),
+    body('personInfo.postalCode').matches(/^\d{4}$/).withMessage('Postal code must be 4 digits'),
+    body('personInfo.city').trim().isLength({ min: 1, max: 100 }).withMessage('City is required'),
+    body('personInfo.phone').matches(/^[\d\s\-+()]+$/).withMessage('Valid phone number is required'),
+    body('cartItems').isArray({ min: 1 }).withMessage('Cart must contain at least one item'),
+    body('cartItems.*.product.id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
+    body('cartItems.*.quantity').isInt({ min: 1, max: 100 }).withMessage('Quantity must be between 1 and 100'),
+    body('typeOfOrder').isIn(['upn', 'cash', 'delivery']).withMessage('Invalid order type')
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn('Order validation failed', { errors: errors.array(), ip: req.ip });
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     logger.info('Processing checkout request', { body: req.body });
     // EXTRACT BODY PARAMETERS
     const { personInfo, cartItems, typeOfOrder } = req.body;
@@ -140,7 +167,7 @@ router.post('/', async (req, res) => {
             if (!product) {
                 throw new Error(`Product with ID ${item.product.id} not found in database`);
             }
-            
+
             // Create order item in database
             await OrderItem.create({
                 orderId: order.id,
@@ -150,7 +177,7 @@ router.post('/', async (req, res) => {
                 color: item.selectedColor || null
             });
             logger.info(`Created order item for product ${product.id} with color: ${item.selectedColor}`);
-            
+
             // Combine product details from DB with quantity from request
             cartItemsProducts.push({
                 ...product,
@@ -204,13 +231,13 @@ router.post('/', async (req, res) => {
         res.status(201).json(minimax_invoice_result);
         return;
     } catch (error) {
-        logger.error('Checkout error:', error);
+        logger.error('CheckdminAuth, aout error:', error);
         res.status(500).json({ error: 'Failed to process checkout', details: error.message });
     }
 });
 
 // Update order status
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', adminAuth, async (req, res) => {
     try {
         const { status } = req.body;
 
@@ -226,13 +253,13 @@ router.put('/:id/status', async (req, res) => {
         await order.updateStatus(status);
         res.json(order);
     } catch (error) {
-        console.error('Error updating order status:', error);
+        console.error('dminAuth, aError updating order status:', error);
         res.status(500).json({ error: 'Failed to update order status' });
     }
 });
 
 // Delete order
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
     try {
         const deleted = await Order.delete(req.params.id);
         if (!deleted) {

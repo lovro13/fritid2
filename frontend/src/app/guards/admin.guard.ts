@@ -12,13 +12,7 @@ export const adminGuard: CanActivateFn = (route, state) => {
     filter(isInitialized => isInitialized), // Wait until initialized
     take(1), // Take only the first emission
     switchMap(() => {
-      const token = authService.getToken();
-      
-      // Check if token exists
-      if (!token) {
-        router.navigate(['/auth']);
-        return of(false);
-      }
+      // Token check removed (handled by HttpOnly cookie and user state)
 
       // Check user role
       return authService.user$.pipe(

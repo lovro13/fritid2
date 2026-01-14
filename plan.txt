@@ -1,3 +1,6 @@
 TODO:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
 - mail verification?
+- telefon popštna številka ko se prijavim, še več stvari samo iz slovenije
+- ko nekaj dodam v košarico želim sporočilo
+- hvala za naročilo page fix

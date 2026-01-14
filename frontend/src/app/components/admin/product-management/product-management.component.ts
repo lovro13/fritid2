@@ -4,6 +4,7 @@ import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angula
 import { Observable } from 'rxjs';
 import { Product } from '../../../models/product.model';
 import { AdminService } from '../../../service/admin.service';
+import { UserService } from '../../../service/user.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -15,6 +16,7 @@ import { environment } from '../../../../environments/environment';
 })
 export class ProductManagementComponent implements OnInit {
   private adminService = inject(AdminService);
+  private userService = inject(UserService);
   private fb = inject(FormBuilder);
 
   products$!: Observable<Product[]>;
@@ -61,16 +63,16 @@ export class ProductManagementComponent implements OnInit {
     console.log(`Editing product: ID=${product.id}, Name="${product.name}"`);
     this.isEditing = true;
     this.currentProductId = product.id;
-    
+
     // Convert colors array to comma-separated string
-    const colorsString = Array.isArray(product.colors) 
-      ? product.colors.join(', ') 
+    const colorsString = Array.isArray(product.colors)
+      ? product.colors.join(', ')
       : '';
-    
+
     // Set image preview if editing
     this.selectedImagePreview = `${environment.apiBase}${product.image_url}` || null;
     this.selectedImageFile = null;
-    
+
     // Properly map the product data to form controls
     this.productForm.patchValue({
       name: product.name || '',
@@ -84,9 +86,9 @@ export class ProductManagementComponent implements OnInit {
     });
 
     // Scroll to the form for better UX
-    document.querySelector('.product-form')?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
+    document.querySelector('.product-form')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
     });
   }
 
@@ -114,25 +116,25 @@ export class ProductManagementComponent implements OnInit {
   onImageSelected(event: Event): void {
     const target = event.target as HTMLInputElement;
     const file = target.files?.[0];
-    
+
     if (file) {
-      
+
       // Validate file type
       if (!file.type.startsWith('image/')) {
         console.warn('Invalid file type selected:', file.type);
         alert('Please select a valid image file.');
         return;
       }
-      
+
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         console.warn('File too large:', file.size);
-        alert('File size must be less than 5MB.');  
+        alert('File size must be less than 5MB.');
         return;
       }
-      
+
       this.selectedImageFile = file;
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -140,7 +142,7 @@ export class ProductManagementComponent implements OnInit {
         this.selectedImagePreview = e.target?.result as string;
       };
       reader.readAsDataURL(file);
-      
+
       // Set a temporary placeholder to satisfy form validation
       this.productForm.patchValue({ image_url: 'WILL_BE_UPLOADED' });
     } else {
@@ -153,11 +155,15 @@ export class ProductManagementComponent implements OnInit {
     formData.append('file', file);
 
     this.isUploading = true;
-    
+
     try {
+      const headers: HeadersInit = {};
+
       const response = await fetch(`${environment.apiBase}/images/upload`, {
         method: 'POST',
-        body: formData
+        headers: headers,
+        body: formData,
+        credentials: 'include' // Send cookies
       });
 
       if (!response.ok) {
@@ -166,12 +172,12 @@ export class ProductManagementComponent implements OnInit {
       }
 
       const data = await response.json();
-      
+
       if (!data.success) {
         console.error('Upload failed:', data.message);
         throw new Error(data.message || 'Upload failed');
       }
-      
+
       return data.imageUrl;
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -203,7 +209,7 @@ export class ProductManagementComponent implements OnInit {
     }
 
     const productData = this.productForm.value;
-    
+
     // Convert comma-separated colors string to array
     if (productData.colors && typeof productData.colors === 'string') {
       productData.colors = productData.colors
@@ -234,7 +240,7 @@ export class ProductManagementComponent implements OnInit {
           }
         });
       } else {
-        this.adminService.createProduct(productData). subscribe({
+        this.adminService.createProduct(productData).subscribe({
           next: (newProduct) => {
             this.resetForm();
             this.loadProducts();
@@ -308,18 +314,18 @@ export class ProductManagementComponent implements OnInit {
       console.log('Empty image URL provided');
       return '';
     }
-    
+
     // If the URL already includes the protocol, return as is
     if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
-    
+
     // If it starts with /images/, prepend the backend URL
     if (imageUrl.startsWith('/images/')) {
       const fullUrl = `${environment.apiBase}${imageUrl}`;
       return fullUrl;
     }
-    
+
     // Otherwise, assume it's a relative path and construct the full URL
     const fullUrl = `${environment.apiBase}/images/${imageUrl}`;
     return fullUrl;

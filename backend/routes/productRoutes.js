@@ -51,7 +51,9 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
-        if (!product) {
+
+        // Product not found OR product is inactive (IDOR protection)
+        if (!product || !product.is_active) {
             return res.status(404).json({ error: 'Product not found' });
         }
         res.json(product);

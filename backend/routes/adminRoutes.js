@@ -1,4 +1,5 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const router = express.Router();
 const Product = require('../models/Product');
 const adminAuth = require('../middleware/adminAuth');
@@ -33,14 +34,27 @@ router.get('/products/:id', adminAuth, async (req, res) => {
 });
 
 // Create new product
-router.post('/products', adminAuth, async (req, res) => {
+router.post('/products', adminAuth, [
+    body('name').trim().escape().notEmpty().withMessage('Name is required'),
+    body('description').optional().trim().escape(),
+    body('price').isFloat({ min: 0 }).withMessage('Price must be a positive number'),
+    // image_url is usually a path, so we don't escape it strictly, but we trim it
+    body('image_url').trim().notEmpty().withMessage('Image URL is required'),
+    body('stock_quantity').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
+    // Colors and category might be arbitrary, but we can simplisticly trim/escape or expect strings
+    body('category').optional().trim().escape()
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn('Product validation failed', { errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const { name, description, price, image_url, colors, category, stock_quantity } = req.body;
-        
-        if (!name || !price || !image_url) {
-            logger.warn('Attempted to create product with missing required fields');
-            return res.status(400).json({ error: 'Name, price, and image URL are required' });
-        }
+
+        // Legacy manual check removed in favor of validator, but keeping logic sane
 
         const productData = {
             name,
@@ -62,7 +76,21 @@ router.post('/products', adminAuth, async (req, res) => {
 });
 
 // Update product
-router.put('/products/:id', adminAuth, async (req, res) => {
+router.put('/products/:id', adminAuth, [
+    body('name').optional().trim().escape(),
+    body('description').optional().trim().escape(),
+    body('price').optional().isFloat({ min: 0 }),
+    body('image_url').optional().trim(),
+    body('stock_quantity').optional().isInt({ min: 0 }),
+    body('category').optional().trim().escape()
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn('Product update validation failed', { errors: errors.array() });
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         const product = await Product.findById(req.params.id);
         if (!product) {
@@ -71,7 +99,7 @@ router.put('/products/:id', adminAuth, async (req, res) => {
         }
 
         const { name, description, price, image_url, colors, category, stock_quantity, is_active } = req.body;
-        
+
         // Create updated product data
         const productData = {
             name: name !== undefined ? name : product.name,

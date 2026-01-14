@@ -1,8 +1,8 @@
 const jwt = require('jsonwebtoken');
 
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Only accept tokens from HttpOnly cookies
+    const token = req.cookies.token;
 
     if (!token) {
         return res.status(401).json({ error: 'Access token required' });
@@ -17,21 +17,6 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// const optionalAuth = (req, res, next) => {
-//     const authHeader = req.headers['authorization'];
-//     const token = authHeader && authHeader.split(' ')[1];
-
-//     if (token) {
-//         jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-//             if (!err) {
-//                 req.user = user;
-//             }
-//         });
-//     }
-//     next();
-// };
-
 module.exports = {
     authenticateToken,
-    // optionalAuth
 };

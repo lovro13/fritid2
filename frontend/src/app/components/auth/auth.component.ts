@@ -12,14 +12,14 @@ import { UserService } from '../../service/user.service';
 })
 export class AuthComponent {
   isLoginMode = true;
-  
+
   // Message flags
   loginSuccess = false;
   loginError = false;
   registrationSuccess = false;
   registrationError = false;
   messageText = '';
-  
+
   // Login form data
   loginData = {
     email: '',
@@ -76,22 +76,22 @@ export class AuthComponent {
   onLogin() {
     console.log('🔐 Login attempt started');
     console.log('Login data:', { email: this.loginData.email, password: '***' });
-    
+
     this.clearMessages();
-    
+
     if (this.loginData.email && this.loginData.password) {
       console.log('✅ Login form validation passed');
-      
+
       this.authService.login(this.loginData.email, this.loginData.password)
         .subscribe({
           next: (res) => {
             console.log('🔐 Login response received:', res);
-            
+
             if (res.success) {
               console.log('✅ Login successful');
               this.loginSuccess = true;
               this.messageText = 'Uspešno ste se prijavili! Preusmerjamo vas...';
-              
+
               // Redirect after a short delay to show the success message
               setTimeout(() => {
                 console.log('🔄 Redirecting to home page');
@@ -111,9 +111,9 @@ export class AuthComponent {
               message: err.message,
               error: err.error
             });
-            
+
             this.loginError = true;
-            
+
             // Provide specific error messages based on status
             if (err.status === 0) {
               this.messageText = 'Napaka pri povezavi s strežnikom. Preverite internetno povezavo.';
@@ -143,21 +143,21 @@ export class AuthComponent {
       confirmPassword: '***',
       agreeToTerms: this.registerData.agreeToTerms
     });
-    
+
     this.clearMessages();
-    
+
     if (this.validateRegistration()) {
       console.log('✅ Registration form validation passed');
-      
+
       this.authService.register(this.registerData).subscribe({
         next: (res) => {
           console.log('📝 Registration response received:', res);
-          
+
           if (res.user && res.token) {
             console.log('✅ Registration successful');
             this.registrationSuccess = true;
             this.messageText = res.message || 'Uspešno ste se registrirali! Preusmerjamo vas na prijavo...';
-            
+
             // Switch to login mode after a short delay
             setTimeout(() => {
               console.log('🔄 Switching to login mode');
@@ -178,16 +178,21 @@ export class AuthComponent {
             message: err.message,
             error: err.error
           });
-          
+
           this.registrationError = true;
-          
+
           // Provide specific error messages based on status
           if (err.status === 0) {
             this.messageText = 'Napaka pri povezavi s strežnikom. Preverite internetno povezavo.';
           } else if (err.status === 409) {
             this.messageText = 'Uporabnik s tem email naslovom že obstaja.';
           } else if (err.status === 400) {
-            this.messageText = err.error?.message || 'Napačni podatki. Preverite vnešene informacije.';
+            if (err.error?.errors && Array.isArray(err.error.errors) && err.error.errors.length > 0) {
+              // Extract the first validation error message
+              this.messageText = err.error.errors[0].msg;
+            } else {
+              this.messageText = err.error?.message || 'Napačni podatki. Preverite vnešene informacije.';
+            }
           } else if (err.status >= 500) {
             this.messageText = 'Napaka strežnika. Poskusite znova čez nekaj trenutkov.';
           } else {
@@ -202,10 +207,10 @@ export class AuthComponent {
 
   validateRegistration(): boolean {
     console.log('🔍 Validating registration form');
-    
-    if (!this.registerData.firstName || !this.registerData.lastName || 
-        !this.registerData.email || !this.registerData.password || 
-        !this.registerData.confirmPassword) {
+
+    if (!this.registerData.firstName || !this.registerData.lastName ||
+      !this.registerData.email || !this.registerData.password ||
+      !this.registerData.confirmPassword) {
       console.log('❌ Validation failed: Missing required fields');
       this.registrationError = true;
       this.messageText = 'Prosimo, izpolnite vsa polja.';
