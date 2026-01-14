@@ -53,6 +53,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Get orders by user ID
 router.get('/user/:userId', authenticateToken, async (req, res) => {
     try {
+        // Check ownership: users can only view their own orders, admins can view all
+        if (req.params.userId !== req.user.id.toString() && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Access denied' });
+        }
+
         const orders = await Order.findByUserId(req.params.userId);
         // Load order items for each order
         const ordersWithItems = await Promise.all(
@@ -73,9 +78,9 @@ router.post('/', [
     body('personInfo.email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
     body('personInfo.firstName').trim().isLength({ min: 1, max: 100 }).escape().withMessage('First name is required'),
     body('personInfo.lastName').trim().isLength({ min: 1, max: 100 }).escape().withMessage('Last name is required'),
-    body('personInfo.address').trim().isLength({ min: 1, max: 200 }).withMessage('Address is required'),
+    body('personInfo.address').trim().isLength({ min: 1, max: 200 }).escape().withMessage('Address is required'),
     body('personInfo.postalCode').matches(/^\d{4}$/).withMessage('Postal code must be 4 digits'),
-    body('personInfo.city').trim().isLength({ min: 1, max: 100 }).withMessage('City is required'),
+    body('personInfo.city').trim().isLength({ min: 1, max: 100 }).escape().withMessage('City is required'),
     body('personInfo.phone').matches(/^[\d\s\-+()]+$/).withMessage('Valid phone number is required'),
     body('cartItems').isArray({ min: 1 }).withMessage('Cart must contain at least one item'),
     body('cartItems.*.product.id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
@@ -218,20 +223,24 @@ router.post('/', [
         logger.info("Created minimax invoice for order: ", order.id)
         logger.info("order.paymentMethod: ", order.paymentMethod);
 
-        // Send email notifications
-        await MailService.sendOwnerOrderNotification(order, glsLabelPath);
-        logger.info("Payment method on order and received", order.paymentMethod, personInfo.paymentMethod);
-        if (order.paymentMethod === 'UPN') {
-            await MailService.sendOrderConfirmation(order, true, minimax_invoice_result.invoiceId);
-        } else {
-            await MailService.sendOrderConfirmation(order, false, null);
+        // Send email notifications (Graceful handling)
+        try {
+            await MailService.sendOwnerOrderNotification(order, glsLabelPath);
+            logger.info("Payment method on order and received", order.paymentMethod, personInfo.paymentMethod);
+            if (order.paymentMethod === 'UPN') {
+                await MailService.sendOrderConfirmation(order, true, minimax_invoice_result.invoiceId);
+            } else {
+                await MailService.sendOrderConfirmation(order, false, null);
+            }
+        } catch (mailError) {
+            logger.error('Graceful error - Failed to send notification emails:', mailError.message);
+            // We don't return error here because the order and invoice are already created
         }
-
 
         res.status(201).json(minimax_invoice_result);
         return;
     } catch (error) {
-        logger.error('CheckdminAuth, aout error:', error);
+        logger.error('Checkout error:', error);
         res.status(500).json({ error: 'Failed to process checkout', details: error.message });
     }
 });

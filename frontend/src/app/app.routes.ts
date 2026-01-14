@@ -10,25 +10,26 @@ import { AuthComponent } from './components/auth/auth.component';
 import { ProductManagementComponent } from './components/admin/product-management/product-management.component';
 import { OrdersManagementComponent } from './components/admin/orders-management/orders-management.component';
 import { adminGuard } from './guards/admin.guard';
+import { checkoutGuard } from './guards/checkout.guard';
 
-export const routes: Routes = [ 
+export const routes: Routes = [
   { path: '', component: ProductListComponent },
   { path: 'cart', component: CartComponent },
   { path: 'product/:id', component: ProductDetailComponent },
-  { path: 'info/:id', component: Info},
+  { path: 'info/:id', component: Info },
   { path: 'checkout', component: CheckoutComponent },
-  { path: 'payment-method', component: PaymentMethodComponent },
-  { path: 'thank-you', component: ThankYouComponent },
+  { path: 'payment-method', component: PaymentMethodComponent, canActivate: [checkoutGuard] },
+  { path: 'thank-you', component: ThankYouComponent, canActivate: [checkoutGuard] },
   { path: 'auth', component: AuthComponent },
-  { 
-    path: 'admin/products', 
+  {
+    path: 'admin/products',
     component: ProductManagementComponent,
-    canActivate: [adminGuard] 
+    canActivate: [adminGuard]
   },
-  { 
-    path: 'admin/orders', 
+  {
+    path: 'admin/orders',
     component: OrdersManagementComponent,
-    canActivate: [adminGuard] 
+    canActivate: [adminGuard]
   },
   { path: '**', redirectTo: '' }
 ];

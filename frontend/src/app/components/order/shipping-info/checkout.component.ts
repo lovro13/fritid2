@@ -9,6 +9,7 @@ import { OrderService } from '../../../service/order.service';
 import { CommonModule, DecimalPipe, registerLocaleData } from '@angular/common';
 import { PersonInfo } from '../../../models/order.model';
 import { ProductsService } from '../../../service/products.service';
+import { NotificationService } from '../../../service/notification.service';
 
 registerLocaleData(localeDe);
 
@@ -38,6 +39,10 @@ export class CheckoutComponent {
   total = 0;
   cartItems: CartItem[] = [];
   dataSource: 'none' | 'profile' | 'recent_order' = 'none';
+  emailExists = false;
+  invalidDomain = false;
+  checkingEmail = false;
+  emailChecked = false;
 
 
   constructor(
@@ -46,7 +51,8 @@ export class CheckoutComponent {
     private userService: UserService, // Inject service
     private orderService: OrderService, // Inject order service
     private authService: UserService,
-    private cartService: ProductsService
+    private cartService: ProductsService,
+    private notificationService: NotificationService
   ) {
     this.total = this.cartService.getTotal();
     this.checkoutForm = this.fb.group({
@@ -63,6 +69,13 @@ export class CheckoutComponent {
         return /^0\d{8}$/.test(cleaned) ? null : { invalidSlovenianPhone: true };
       }]],
       companyID: [''] // Optional
+    });
+
+    // Listen to email changes to clear exists flag
+    this.checkoutForm.get('email')?.valueChanges.subscribe(() => {
+      this.emailExists = false;
+      this.invalidDomain = false;
+      this.emailChecked = false;
     });
   }
 
@@ -131,10 +144,56 @@ export class CheckoutComponent {
   clearForm() {
     this.checkoutForm.reset();
     this.dataSource = 'none';
+    this.emailExists = false;
+  }
+
+  onBlurEmail() {
+    const email = this.checkoutForm.get('email')?.value;
+    const currentUser = this.authService.getCurrentUser();
+
+    if (email && this.checkoutForm.get('email')?.valid) {
+      this.checkingEmail = true;
+      this.userService.checkEmailExists(email).subscribe({
+        next: (status) => {
+          // Only flag as "existing" if it belongs to someone else (or we are guest)
+          this.emailExists = status.exists && (!currentUser || currentUser.email !== email);
+          this.invalidDomain = !status.validDomain;
+          this.checkingEmail = false;
+          this.emailChecked = true;
+        },
+        error: () => {
+          this.checkingEmail = false;
+          this.emailChecked = false;
+        }
+      });
+    }
   }
 
   onSubmit() {
-    if (this.checkoutForm.valid) {
+    if (this.checkingEmail) {
+      return;
+    }
+
+    const email = this.checkoutForm.get('email')?.value;
+
+    if (!this.emailChecked && email && this.checkoutForm.get('email')?.valid) {
+      this.onBlurEmail();
+      return;
+    }
+
+    if (this.invalidDomain) {
+      this.notificationService.showError('Vnešen e-poštni naslov ne obstaja. Brez veljavnega naslova naročila ni mogoče oddati.');
+      return;
+    }
+
+    if (this.checkoutForm.invalid) {
+      this.checkoutForm.markAllAsTouched();
+      this.notificationService.showError('Prosimo, preverite vsa polja.');
+      return;
+    }
+
+    // Double check email if it was somehow skipped
+    if (email && !this.invalidDomain) {
       this.orderService.setPersonInfo(this.checkoutForm.value as PersonInfo);
       console.log('Form Submitted', this.checkoutForm.value);
       console.log('With cart items:', this.cartItems);

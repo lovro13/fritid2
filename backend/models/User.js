@@ -1,5 +1,6 @@
 const { getPool } = require('./dbModel');
 const bcrypt = require('bcryptjs');
+const dns = require('dns').promises;
 
 class User {
     constructor(userData) {
@@ -40,10 +41,23 @@ class User {
         return rows[0].count > 0;
     }
 
+    static async validateEmailDomain(email) {
+        try {
+            const domain = email.split('@')[1];
+            if (!domain) return false;
+
+            const mxRecords = await dns.resolveMx(domain);
+            return mxRecords && mxRecords.length > 0;
+        } catch (error) {
+            // If domain doesn't exist or has no MX records
+            return false;
+        }
+    }
+
     static async create(userData) {
         const pool = getPool();
         const { firstName, lastName, email, password, phoneNumber, address, postalCode, city, role = 'user' } = userData;
-        const passwordHash = password ? bcrypt.hashSync(password, 10) : null;
+        const passwordHash = password ? await bcrypt.hash(password, 10) : null;
 
         const [result] = await pool.execute(
             'INSERT INTO users (first_name, last_name, email, password_hash, phone_number, address, postal_code, city, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -81,7 +95,7 @@ class User {
         if (!this.passwordHash) {
             return false; // No password hash means no valid password
         }
-        return bcrypt.compareSync(password, this.passwordHash);
+        return await bcrypt.compare(password, this.passwordHash);
     }
 
     async initPassword(password) {
@@ -94,7 +108,7 @@ class User {
             throw new Error(`CRITICAL ERROR: Attempted to initialize password for user ${this.id} who already has a password set. This should never happen!`);
         }
 
-        const passwordHash = bcrypt.hashSync(password, 10);
+        const passwordHash = await bcrypt.hash(password, 10);
         const pool = getPool();
 
         await pool.execute(

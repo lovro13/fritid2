@@ -49,11 +49,15 @@ router.get('/email/:email', adminAuth, async (req, res) => {
     }
 });
 
-// Check if email exists
+// Check if email exists and validate domain
 router.get('/exists/email/:email', async (req, res) => {
     try {
-        const exists = await User.emailExists(req.params.email);
-        res.json(exists);
+        const email = req.params.email;
+        const [exists, validDomain] = await Promise.all([
+            User.emailExists(email),
+            User.validateEmailDomain(email)
+        ]);
+        res.json({ exists, validDomain });
     } catch (error) {
         console.error('Error checking email:', error);
         res.status(500).json({ error: 'Napaka pri preverjanju e-poštnega naslova' });

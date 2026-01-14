@@ -72,8 +72,8 @@
           <span class="label-icon">📧</span>
           E-poštni naslov
         </label>
-        <input id="email" type="email" formControlName="email" placeholder="ime@example.com" required
-          class="form-input">
+        <input id="email" type="email" formControlName="email" placeholder="ime@example.com" required class="form-input"
+          (blur)="onBlurEmail()">
         @if (checkoutForm.get('email')?.invalid && checkoutForm.get('email')?.touched) {
         <div class="error-message">
           <span class="error-icon">⚠️</span>
@@ -83,6 +83,17 @@
           @if (checkoutForm.get('email')?.hasError('email')) {
           Vnesite veljaven e-poštni naslov.
           }
+        </div>
+        }
+        @if (emailExists && !checkingEmail) {
+        <div class="auto-fill-notice info email-notice">
+          <span class="notice-icon">�</span>
+          <p>Ta e-poštni naslov je že registriran. Želite <a routerLink="/auth">se prijaviti</a> za hitrejši nakup?</p>
+        </div>
+        } @else if (invalidDomain && !checkingEmail) {
+        <div class="error-message">
+          <span class="error-icon">⚠️</span>
+          Vnešen e-poštni naslov ne obstaja. Prosimo, preverite črkovanje ali uporabite drug naslov.
         </div>
         }
       </div>
@@ -186,8 +197,8 @@
         </div>
       </div>
 
-      <button type="submit" [disabled]="checkoutForm.invalid" [routerLink]="['/payment-method']" (click)="onSubmit()"
-        class="checkout-btn">
+      <button type="submit" [disabled]="checkoutForm.invalid || checkingEmail" [class.checking-email]="checkingEmail"
+        (click)="onSubmit()" class="checkout-btn">
         <span class="btn-icon">💳</span>
         <span class="btn-text">Nadaljuj na plačilo</span>
         <span class="btn-arrow">→</span>

@@ -1,7 +1,6 @@
 TODO later when deploying:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
 TODO soon:
-- ko nekaj dodam v košarico želim sporočilo
-- hvala za naročilo page fix
+
 TODO maybe:
 - mail verification?

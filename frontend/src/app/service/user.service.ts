@@ -195,4 +195,8 @@ export class UserService {
     return this.http.put<User>(`${this.apiUrl}/${userId}/profile`, profileData);
   }
 
+  checkEmailExists(email: string): Observable<{ exists: boolean, validDomain: boolean }> {
+    return this.http.get<{ exists: boolean, validDomain: boolean }>(`${this.apiUrl}/exists/email/${email}`);
+  }
+
 }

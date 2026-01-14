@@ -106,18 +106,18 @@ $success-color: #27ae60;
       margin-bottom: 1.5rem;
       font-size: 0.9rem;
       font-weight: 500;
-      
+
       .notice-icon {
         font-size: 1.1rem;
         flex-shrink: 0;
       }
-      
+
       p {
         margin: 0;
         line-height: 1.4;
         flex-grow: 1;
       }
-      
+
       .clear-btn {
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
@@ -129,45 +129,79 @@ $success-color: #27ae60;
         cursor: pointer;
         transition: all 0.2s ease;
         flex-shrink: 0;
-        
+
         &:hover {
           background: rgba(255, 255, 255, 0.3);
           transform: translateY(-1px);
         }
-        
+
         &:active {
           transform: translateY(0);
         }
       }
-      
+
+      &.error {
+        background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+        border: 1px solid #ef9a9a;
+        color: #b71c1c;
+
+        .clear-btn {
+          border-color: #b71c1c;
+
+          &:hover {
+            background: rgba(183, 28, 28, 0.1);
+          }
+        }
+      }
+
       &.success {
         background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
         border: 1px solid #c3e6cb;
         color: #155724;
-        
+
         .notice-icon {
           animation: sparkle 2s infinite;
         }
-        
+
         .clear-btn {
           border-color: #155724;
-          
+
           &:hover {
             background: rgba(21, 87, 36, 0.1);
           }
         }
       }
-      
+
       &.info {
         background: linear-gradient(135deg, #cce7ff 0%, #b3d9ff 100%);
         border: 1px solid #99ccff;
         color: #004085;
-        
+
         .clear-btn {
           border-color: #004085;
-          
+
           &:hover {
             background: rgba(0, 64, 133, 0.1);
+          }
+        }
+      }
+
+      &.email-notice {
+        margin-top: 0.75rem;
+        margin-bottom: 0;
+        animation: fadeIn 0.3s ease-out;
+
+        p {
+          font-size: 0.85rem;
+
+          a {
+            color: #007bff;
+            text-decoration: underline;
+            font-weight: 600;
+
+            &:hover {
+              color: #0056b3;
+            }
           }
         }
       }
@@ -370,15 +404,38 @@ $success-color: #27ae60;
           }
         }
       }
+
+      &.checking-email {
+        opacity: 0.7;
+        cursor: wait;
+        pointer-events: none;
+
+        .btn-icon {
+          animation: spin 1s linear infinite;
+        }
+      }
     }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
 // Animations
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
@@ -389,25 +446,41 @@ $success-color: #27ae60;
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 @keyframes sparkle {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   25% {
     transform: scale(1.1);
     opacity: 0.8;
   }
+
   50% {
     transform: scale(1.2);
     opacity: 0.9;
   }
+
   75% {
     transform: scale(1.1);
     opacity: 0.8;
