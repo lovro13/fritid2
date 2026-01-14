@@ -97,7 +97,7 @@ app.use(cookieParser());
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 300, // limit each IP to 300 requests per windowMs (approx 1 per 3 seconds on avg)
-  message: 'Too many requests from this IP, please try again later.',
+  message: 'Preveč zahtevkov s tega IP naslova, poskusite znova pozneje.',
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -107,7 +107,7 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 login attempts per 15 minutes
   skipSuccessfulRequests: true,
-  message: 'Too many authentication attempts, please try again later.',
+  message: 'Preveč poskusov prijave, poskusite znova pozneje.',
   standardHeaders: true,
   legacyHeaders: false,
 });

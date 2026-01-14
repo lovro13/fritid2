@@ -33,6 +33,10 @@ export class AuthComponent {
     email: '',
     password: '',
     confirmPassword: '',
+    phoneNumber: '',
+    address: '',
+    postalCode: '',
+    city: '',
     agreeToTerms: false
   };
 
@@ -58,6 +62,10 @@ export class AuthComponent {
       email: '',
       password: '',
       confirmPassword: '',
+      phoneNumber: '',
+      address: '',
+      postalCode: '',
+      city: '',
       agreeToTerms: false
     };
     // Clear all message flags
@@ -139,6 +147,10 @@ export class AuthComponent {
       firstName: this.registerData.firstName,
       lastName: this.registerData.lastName,
       email: this.registerData.email,
+      phoneNumber: this.registerData.phoneNumber,
+      address: this.registerData.address,
+      postalCode: this.registerData.postalCode,
+      city: this.registerData.city,
       password: '***',
       confirmPassword: '***',
       agreeToTerms: this.registerData.agreeToTerms
@@ -153,7 +165,7 @@ export class AuthComponent {
         next: (res) => {
           console.log('📝 Registration response received:', res);
 
-          if (res.user && res.token) {
+          if (res.user) {
             console.log('✅ Registration successful');
             this.registrationSuccess = true;
             this.messageText = res.message || 'Uspešno ste se registrirali! Preusmerjamo vas na prijavo...';
@@ -210,7 +222,9 @@ export class AuthComponent {
 
     if (!this.registerData.firstName || !this.registerData.lastName ||
       !this.registerData.email || !this.registerData.password ||
-      !this.registerData.confirmPassword) {
+      !this.registerData.confirmPassword || !this.registerData.phoneNumber ||
+      !this.registerData.address || !this.registerData.postalCode ||
+      !this.registerData.city) {
       console.log('❌ Validation failed: Missing required fields');
       this.registrationError = true;
       this.messageText = 'Prosimo, izpolnite vsa polja.';
@@ -237,6 +251,40 @@ export class AuthComponent {
       console.log('❌ Validation failed: Invalid email format');
       this.registrationError = true;
       this.messageText = 'Prosimo, vnesite veljaven email naslov.';
+      return false;
+    }
+
+    // Slovenian phone number validation (9 digits starting with 0, spaces allowed)
+    const cleaned = this.registerData.phoneNumber.replace(/\s/g, '');
+    if (!/^0\d{8}$/.test(cleaned)) {
+      console.log('❌ Validation failed: Invalid phone number');
+      this.registrationError = true;
+      this.messageText = 'Telefonska številka mora imeti 9 številk in se začeti z 0 (npr. 051234567 ali 051 234 567).';
+      return false;
+    }
+
+    // Slovenian postal code validation (4 digits, 1000-9999)
+    const postalCodeRegex = /^[1-9]\d{3}$/;
+    if (!postalCodeRegex.test(this.registerData.postalCode)) {
+      console.log('❌ Validation failed: Invalid postal code');
+      this.registrationError = true;
+      this.messageText = 'Prosimo, vnesite veljavno slovensko poštno številko (4 številke, 1000-9999).';
+      return false;
+    }
+
+    // Address validation (minimum 5 characters)
+    if (this.registerData.address.length < 5) {
+      console.log('❌ Validation failed: Address too short');
+      this.registrationError = true;
+      this.messageText = 'Naslov mora imeti vsaj 5 znakov.';
+      return false;
+    }
+
+    // City validation (minimum 2 characters)
+    if (this.registerData.city.length < 2) {
+      console.log('❌ Validation failed: City name too short');
+      this.registrationError = true;
+      this.messageText = 'Ime kraja mora imeti vsaj 2 znaka.';
       return false;
     }
 

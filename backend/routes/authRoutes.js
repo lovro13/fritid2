@@ -7,14 +7,30 @@ const router = express.Router();
 
 // Register
 router.post('/register', [
-    body('email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
+    body('email').isEmail().trim().toLowerCase().withMessage('Vnesite veljaven e-poštni naslov'),
     body('password')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters')
+        .withMessage('Geslo mora imeti vsaj 8 znakov')
         .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-        .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
-    body('firstName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('First name is required'),
-    body('lastName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('Last name is required')
+        .withMessage('Geslo mora vsebovati vsaj eno veliko črko, eno malo črko in eno številko'),
+    body('firstName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('Ime je obvezno'),
+    body('lastName').trim().isLength({ min: 1, max: 50 }).escape().withMessage('Priimek je obvezen'),
+    body('phoneNumber')
+        .trim()
+        .custom((value) => {
+            // Remove all spaces and check if it matches 0 followed by 8 digits
+            const cleaned = value.replace(/\s/g, '');
+            if (!/^0\d{8}$/.test(cleaned)) {
+                throw new Error('Telefonska številka mora vsebovati 9 številk in se začeti z 0 (npr. 051234567 ali 051 234 567)');
+            }
+            return true;
+        }),
+    body('address').trim().isLength({ min: 5, max: 100 }).withMessage('Naslov je obvezen (5-100 znakov)'),
+    body('postalCode')
+        .trim()
+        .matches(/^[1-9]\d{3}$/)
+        .withMessage('Vnesite veljavno slovensko poštno številko (4 številke, 1000-9999)'),
+    body('city').trim().isLength({ min: 2, max: 50 }).escape().withMessage('Kraj je obvezen (2-50 znakov)')
 ], async (req, res) => {
     // Check validation errors
     const errors = validationResult(req);
@@ -24,15 +40,24 @@ router.post('/register', [
     }
 
     try {
-        const { firstName, lastName, email, password } = req.body;
+        const { firstName, lastName, email, password, phoneNumber, address, postalCode, city } = req.body;
         logger.info(`Attempting to register user with email: ${email}, firstName: ${firstName}, lastName: ${lastName}`);
         // Check if user already exists`
         const existingUser = await User.findByEmail(email);
         if (existingUser && existingUser.passwordHash != null) {
-            return res.status(409).json({ message: 'User with this email already exists' });
+            return res.status(409).json({ message: 'Uporabnik s tem e-poštnim naslovom že obstaja' });
         } else if (existingUser && existingUser.passwordHash == null) {
-            // User exists but has no password, initialize password
+            // User exists but has no password, initialize password and update address info
             await existingUser.initPassword(password);
+
+            // Update address information
+            existingUser.firstName = firstName;
+            existingUser.lastName = lastName;
+            existingUser.phoneNumber = phoneNumber;
+            existingUser.address = address;
+            existingUser.postalCode = postalCode;
+            existingUser.city = city;
+            await existingUser.save();
 
             // Generate JWT token
             const token = jwt.sign(
@@ -50,12 +75,12 @@ router.post('/register', [
             });
 
             return res.status(200).json({
-                message: 'Password set successfully',
+                message: 'Geslo je bilo uspešno nastavljeno',
                 user: existingUser.toJSON()
             });
         } else {
             // Create new user
-            const user = await User.create({ firstName, lastName, email, password });
+            const user = await User.create({ firstName, lastName, email, password, phoneNumber, address, postalCode, city });
 
             // Generate JWT token
             const token = jwt.sign(
@@ -73,21 +98,21 @@ router.post('/register', [
             });
 
             res.status(201).json({
-                message: 'User created successfully',
+                message: 'Uporabnik uspešno ustvarjen',
                 user: user.toJSON()
             });
         }
     } catch (error) {
         console.error('Registration error:', error);
         logger.warn(`Failed registration attempt for email: ${req.body.email} from IP: ${req.ip}`);
-        res.status(500).json({ error: 'Failed to create user' });
+        res.status(500).json({ error: 'Napaka pri ustvarjanju uporabnika' });
     }
 });
 
 // Login
 router.post('/login', [
-    body('email').isEmail().trim().toLowerCase().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required')
+    body('email').isEmail().trim().toLowerCase().withMessage('Vnesite veljaven e-poštni naslov'),
+    body('password').notEmpty().withMessage('Geslo je obvezno')
 ], async (req, res) => {
     // Check validation errors
     const errors = validationResult(req);
@@ -102,20 +127,20 @@ router.post('/login', [
         const user = await User.findByEmail(email);
         if (!user) {
             logger.warn(`Failed login attempt for non-existent email: ${email} from IP: ${req.ip}`);
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Neveljavni podatki za prijavo' });
         }
 
         // Check if user has a password set (prevent login for users without password)
         if (!user.passwordHash) {
             logger.warn(`Login attempt for passwordless account: ${email} from IP: ${req.ip}`);
-            return res.status(401).json({ error: 'Account requires password setup' });
+            return res.status(401).json({ error: 'Račun zahteva nastavitev gesla' });
         }
 
         // Validate password
         const isValidPassword = await user.validatePassword(password);
         if (!isValidPassword) {
             logger.warn(`Failed login attempt for email: ${email} from IP: ${req.ip}`);
-            return res.status(401).json({ error: 'Invalid credentials' });
+            return res.status(401).json({ error: 'Neveljavni podatki za prijavo' });
         }
 
         // Generate JWT token
@@ -136,12 +161,12 @@ router.post('/login', [
         logger.info(`Successful login for user: ${user.id} from IP: ${req.ip}`);
         res.json({
             success: true,
-            message: 'Login successful',
+            message: 'Prijava uspešna',
             user: user.toJSON()
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Failed to login' });
+        res.status(500).json({ error: 'Napaka pri prijavi' });
     }
 });
 
@@ -153,14 +178,14 @@ router.post('/verify', (req, res) => {
 
         if (!token) {
             logger.warn(`Verify failed: No token provided from IP: ${req.ip}`);
-            return res.status(401).json({ valid: false, error: 'No token provided' });
+            return res.status(401).json({ valid: false, error: 'Žeton ni predložen' });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         res.json({ valid: true, userId: decoded.id, role: decoded.role });
     } catch (error) {
         logger.warn(`Verify failed: Invalid token from IP: ${req.ip}. Error: ${error.message}`);
-        res.status(401).json({ valid: false, error: 'Invalid token' });
+        res.status(401).json({ valid: false, error: 'Neveljaven žeton' });
     }
 });
 
@@ -171,7 +196,7 @@ router.post('/logout', (req, res) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax'
     });
-    res.json({ success: true, message: 'Logged out successfully' });
+    res.json({ success: true, message: 'Odjava uspešna' });
 });
 
 module.exports = router;

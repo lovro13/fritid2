@@ -11,16 +11,10 @@
 
     <!-- Mode Toggle Tabs -->
     <div class="mode-tabs">
-      <button 
-        class="tab-btn" 
-        [class.active]="isLoginMode"
-        (click)="isLoginMode = true; clearMessages()">
+      <button class="tab-btn" [class.active]="isLoginMode" (click)="isLoginMode = true; clearMessages()">
         Prijava
       </button>
-      <button 
-        class="tab-btn" 
-        [class.active]="!isLoginMode"
-        (click)="isLoginMode = false; clearMessages()">
+      <button class="tab-btn" [class.active]="!isLoginMode" (click)="isLoginMode = false; clearMessages()">
         Registracija
       </button>
     </div>
@@ -45,14 +39,8 @@
             <i class="icon">📧</i>
             Email naslov
           </label>
-          <input 
-            type="email" 
-            id="loginEmail"
-            [(ngModel)]="loginData.email"
-            name="loginEmail"
-            required
-            placeholder="vaš@email.com"
-            class="form-input">
+          <input type="email" id="loginEmail" [(ngModel)]="loginData.email" name="loginEmail" required
+            placeholder="vaš@email.com" class="form-input">
         </div>
 
         <div class="form-group">
@@ -60,29 +48,17 @@
             <i class="icon">🔒</i>
             Geslo
           </label>
-          <input 
-            type="password" 
-            id="loginPassword"
-            [(ngModel)]="loginData.password"
-            name="loginPassword"
-            required
-            placeholder="Vnesite geslo"
-            class="form-input">
+          <input type="password" id="loginPassword" [(ngModel)]="loginData.password" name="loginPassword" required
+            placeholder="Vnesite geslo" class="form-input">
         </div>
 
         <div class="form-actions">
-          <button 
-            type="button" 
-            class="forgot-password-btn"
-            (click)="forgotPassword()">
+          <button type="button" class="forgot-password-btn" (click)="forgotPassword()">
             Pozabljeno geslo?
           </button>
         </div>
 
-        <button 
-          type="submit" 
-          class="submit-btn"
-          [disabled]="!loginForm.form.valid">
+        <button type="submit" class="submit-btn" [disabled]="!loginForm.form.valid">
           <span class="btn-icon">🚀</span>
           Prijavite se
         </button>
@@ -98,14 +74,8 @@
               <i class="icon">👤</i>
               Ime
             </label>
-            <input 
-              type="text" 
-              id="firstName"
-              [(ngModel)]="registerData.firstName"
-              name="firstName"
-              required
-              placeholder="Vaše ime"
-              class="form-input">
+            <input type="text" id="firstName" [(ngModel)]="registerData.firstName" name="firstName" required
+              placeholder="Vaše ime" class="form-input">
           </div>
 
           <div class="form-group">
@@ -113,14 +83,8 @@
               <i class="icon">👤</i>
               Priimek
             </label>
-            <input 
-              type="text" 
-              id="lastName"
-              [(ngModel)]="registerData.lastName"
-              name="lastName"
-              required
-              placeholder="Vaš priimek"
-              class="form-input">
+            <input type="text" id="lastName" [(ngModel)]="registerData.lastName" name="lastName" required
+              placeholder="Vaš priimek" class="form-input">
           </div>
         </div>
 
@@ -129,14 +93,46 @@
             <i class="icon">📧</i>
             Email naslov
           </label>
-          <input 
-            type="email" 
-            id="registerEmail"
-            [(ngModel)]="registerData.email"
-            name="registerEmail"
-            required
-            placeholder="vaš@email.com"
-            class="form-input">
+          <input type="email" id="registerEmail" [(ngModel)]="registerData.email" name="registerEmail" required
+            placeholder="vaš@email.com" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber">
+            <i class="icon">📱</i>
+            Telefonska številka
+          </label>
+          <input type="tel" id="phoneNumber" [(ngModel)]="registerData.phoneNumber" name="phoneNumber" required
+            placeholder="051 234 567" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label for="address">
+            <i class="icon">🏠</i>
+            Naslov
+          </label>
+          <input type="text" id="address" [(ngModel)]="registerData.address" name="address" required minlength="5"
+            placeholder="Ulica in hišna številka" class="form-input">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="postalCode">
+              <i class="icon">📮</i>
+              Poštna številka
+            </label>
+            <input type="text" id="postalCode" [(ngModel)]="registerData.postalCode" name="postalCode" required
+              pattern="^[1-9]\d{3}$" placeholder="1000" maxlength="4" class="form-input">
+          </div>
+
+          <div class="form-group">
+            <label for="city">
+              <i class="icon">🏙️</i>
+              Kraj
+            </label>
+            <input type="text" id="city" [(ngModel)]="registerData.city" name="city" required minlength="2"
+              placeholder="Ljubljana" class="form-input">
+          </div>
         </div>
 
         <div class="form-row">
@@ -145,15 +141,8 @@
               <i class="icon">🔒</i>
               Geslo
             </label>
-            <input 
-              type="password" 
-              id="registerPassword"
-              [(ngModel)]="registerData.password"
-              name="registerPassword"
-              required
-              minlength="6"
-              placeholder="Najmanj 6 znakov"
-              class="form-input">
+            <input type="password" id="registerPassword" [(ngModel)]="registerData.password" name="registerPassword"
+              required minlength="6" placeholder="Najmanj 6 znakov" class="form-input">
           </div>
 
           <div class="form-group">
@@ -161,33 +150,21 @@
               <i class="icon">🔒</i>
               Potrdite geslo
             </label>
-            <input 
-              type="password" 
-              id="confirmPassword"
-              [(ngModel)]="registerData.confirmPassword"
-              name="confirmPassword"
-              required
-              placeholder="Ponovite geslo"
-              class="form-input">
+            <input type="password" id="confirmPassword" [(ngModel)]="registerData.confirmPassword"
+              name="confirmPassword" required placeholder="Ponovite geslo" class="form-input">
           </div>
         </div>
 
         <div class="form-group checkbox-group">
           <label class="checkbox-label">
-            <input 
-              type="checkbox" 
-              [(ngModel)]="registerData.agreeToTerms"
-              name="agreeToTerms"
-              required>
+            <input type="checkbox" [(ngModel)]="registerData.agreeToTerms" name="agreeToTerms" required>
             <span class="checkmark"></span>
-            Strinjam se s <a href="#" class="terms-link">pogoji uporabe</a> in <a href="#" class="terms-link">politiko zasebnosti</a>
+            Strinjam se s <a href="#" class="terms-link">pogoji uporabe</a> in <a href="#" class="terms-link">politiko
+              zasebnosti</a>
           </label>
         </div>
 
-        <button 
-          type="submit" 
-          class="submit-btn"
-          [disabled]="!registerForm.form.valid || !registerData.agreeToTerms">
+        <button type="submit" class="submit-btn" [disabled]="!registerForm.form.valid || !registerData.agreeToTerms">
           <span class="btn-icon">✨</span>
           Registrirajte se
         </button>
@@ -200,7 +177,7 @@
         <span>ali</span>
       </div>
        -->
-      <!-- <div class="social-buttons">
+    <!-- <div class="social-buttons">
         <button class="social-btn google-btn">
           <span class="social-icon">🔍</span>
           Nadaljuj z Google
@@ -217,10 +194,7 @@
     <div class="auth-footer">
       <p>
         {{ isLoginMode ? 'Nimate računa?' : 'Že imate račun?' }}
-        <button 
-          type="button" 
-          class="switch-mode-btn"
-          (click)="toggleMode()">
+        <button type="button" class="switch-mode-btn" (click)="toggleMode()">
           {{ isLoginMode ? 'Registrirajte se' : 'Prijavite se' }}
         </button>
       </p>

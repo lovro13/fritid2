@@ -1,5 +1,5 @@
 import { Component, LOCALE_ID, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subscription } from 'rxjs';
 import { UserService } from '../../../service/user.service';
@@ -39,7 +39,7 @@ export class CheckoutComponent {
   cartItems: CartItem[] = [];
   dataSource: 'none' | 'profile' | 'recent_order' = 'none';
 
-  
+
   constructor(
     private fb: FormBuilder,
     private router: Router,
@@ -56,11 +56,16 @@ export class CheckoutComponent {
       address: ['', Validators.required],
       postalCode: ['', [Validators.required, Validators.pattern('^[0-9]{4}$')]],
       city: ['', Validators.required],
-      phone: ['', [Validators.required, Validators.pattern('^(\\+386|0)[0-9]{8}$')]],
+      phone: ['', [Validators.required, (control: AbstractControl) => {
+        const val = control.value;
+        if (!val) return null;
+        const cleaned = val.replace(/\s/g, '');
+        return /^0\d{8}$/.test(cleaned) ? null : { invalidSlovenianPhone: true };
+      }]],
       companyID: [''] // Optional
     });
   }
-  
+
   ngOnInit() {
     // Auto-fill user data if logged in
     this.cartSub = this.cartService.cartItems$.subscribe(items => { this.cartItems = items })
@@ -73,7 +78,7 @@ export class CheckoutComponent {
             // Get the most recent order (assuming orders are sorted by date)
             const mostRecentOrder = orders[0];
             console.log('Most recent order:', mostRecentOrder);
-            
+
             // Auto-fill form with most recent order's shipping data
             const formData = {
               firstName: mostRecentOrder.shippingFirstName || '',
@@ -84,7 +89,7 @@ export class CheckoutComponent {
               city: mostRecentOrder.shippingCity || '',
               phone: mostRecentOrder.shippingPhoneNumber || ''
             };
-            
+
             console.log('Form data to patch:', formData);
             this.checkoutForm.patchValue(formData);
             this.dataSource = 'recent_order';

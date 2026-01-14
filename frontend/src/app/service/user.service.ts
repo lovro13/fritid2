@@ -161,7 +161,11 @@ export class UserService {
       lastName: userData.lastName,
       email: userData.email,
       password: userData.password,
-      confirmPassword: userData.confirmPassword
+      confirmPassword: userData.confirmPassword,
+      phoneNumber: userData.phoneNumber,
+      address: userData.address,
+      postalCode: userData.postalCode,
+      city: userData.city
     };
     console.log('Registration request:', registrationRequest);
 

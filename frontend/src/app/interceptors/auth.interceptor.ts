@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, Injector } from '@angular/core';
 import { HttpRequest, HttpHandlerFn, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -27,7 +27,7 @@ export function authInterceptor(request: HttpRequest<unknown>,
   next: HttpHandlerFn
 ): Observable<HttpEvent<unknown>> {
   const router = inject(Router);
-  const authService = inject(UserService);
+  const injector = inject(Injector);
 
   // Clone the request to enable credentials (cookies)
   const modifiedRequest = request.clone({
@@ -39,6 +39,7 @@ export function authInterceptor(request: HttpRequest<unknown>,
     catchError((error: HttpErrorResponse) => {
       // If we get a 401 Unauthorized error, clear tokens and redirect
       if (error.status === 401) {
+        const authService = injector.get(UserService);
         authService.clearAll();
         router.navigate(['/auth']);
         return throwError(() => error);

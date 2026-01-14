@@ -42,14 +42,14 @@ class User {
 
     static async create(userData) {
         const pool = getPool();
-        const { firstName, lastName, email, password, role = 'user' } = userData;
+        const { firstName, lastName, email, password, phoneNumber, address, postalCode, city, role = 'user' } = userData;
         const passwordHash = password ? bcrypt.hashSync(password, 10) : null;
 
         const [result] = await pool.execute(
-            'INSERT INTO users (first_name, last_name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)',
-            [firstName, lastName, email, passwordHash, role]
+            'INSERT INTO users (first_name, last_name, email, password_hash, phone_number, address, postal_code, city, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [firstName, lastName, email, passwordHash, phoneNumber, address, postalCode, city, role]
         );
-        
+
         return User.findById(result.insertId);
     }
 
@@ -57,17 +57,17 @@ class User {
         if (!this.id) {
             throw new Error('Cannot save user without ID');
         }
-        
+
         const pool = getPool();
         await pool.execute(
             `UPDATE users SET 
              first_name = ?, last_name = ?, email = ?, 
              address = ?, postal_code = ?, city = ?, phone_number = ?, role = ?
              WHERE id = ?`,
-            [this.firstName, this.lastName, this.email, 
-             this.address, this.postalCode, this.city, this.phoneNumber, this.role, this.id]
+            [this.firstName, this.lastName, this.email,
+            this.address, this.postalCode, this.city, this.phoneNumber, this.role, this.id]
         );
-        
+
         return this;
     }
 
@@ -88,20 +88,20 @@ class User {
         if (!password) {
             throw new Error('Password is required');
         }
-        
+
         // Check if user already has a password in the database
         if (this.passwordHash !== null) {
             throw new Error(`CRITICAL ERROR: Attempted to initialize password for user ${this.id} who already has a password set. This should never happen!`);
         }
-        
+
         const passwordHash = bcrypt.hashSync(password, 10);
         const pool = getPool();
-        
+
         await pool.execute(
             'UPDATE users SET password_hash = ? WHERE id = ?',
             [passwordHash, this.id]
         );
-        
+
         this.passwordHash = passwordHash;
         return this;
     }

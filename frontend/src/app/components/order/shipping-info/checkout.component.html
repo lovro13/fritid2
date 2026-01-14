@@ -14,36 +14,30 @@
         <span class="section-icon">👤</span>
         Osebni podatki
       </h3>
-      
+
       <!-- Auto-fill indicator -->
       @if (dataSource === 'recent_order') {
-        <div class="auto-fill-notice success">
-          <span class="notice-icon">✨</span>
-          <p>Podatki so samodejno izpolnjeni iz vašega zadnjega naročila</p>
-          <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
-        </div>
+      <div class="auto-fill-notice success">
+        <span class="notice-icon">✨</span>
+        <p>Podatki so samodejno izpolnjeni iz vašega zadnjega naročila</p>
+        <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
+      </div>
       } @else if (dataSource === 'profile') {
-        <div class="auto-fill-notice info">
-          <span class="notice-icon">👤</span>
-          <p>Podatki so samodejno izpolnjeni iz vašega profila</p>
-          <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
-        </div>
+      <div class="auto-fill-notice info">
+        <span class="notice-icon">👤</span>
+        <p>Podatki so samodejno izpolnjeni iz vašega profila</p>
+        <button type="button" class="clear-btn" (click)="clearForm()">Počisti</button>
+      </div>
       }
-      
+
       <div class="form-row">
         <div class="form-group">
           <label for="firstName">
             <span class="label-icon">📝</span>
             Ime
           </label>
-          <input 
-            id="firstName" 
-            type="text" 
-            formControlName="firstName" 
-            placeholder="Vnesite ime" 
-            required
-            class="form-input"
-          >
+          <input id="firstName" type="text" formControlName="firstName" placeholder="Vnesite ime" required
+            class="form-input">
           @if (checkoutForm.get('firstName')?.invalid && checkoutForm.get('firstName')?.touched) {
           <div class="error-message">
             <span class="error-icon">⚠️</span>
@@ -62,14 +56,8 @@
             <span class="label-icon">📝</span>
             Priimek
           </label>
-          <input 
-            id="surname" 
-            type="text" 
-            formControlName="lastName" 
-            placeholder="Vnesite priimek" 
-            required
-            class="form-input"
-          >
+          <input id="surname" type="text" formControlName="lastName" placeholder="Vnesite priimek" required
+            class="form-input">
           @if (checkoutForm.get('lastName')?.invalid && checkoutForm.get('lastName')?.touched) {
           <div class="error-message">
             <span class="error-icon">⚠️</span>
@@ -84,14 +72,8 @@
           <span class="label-icon">📧</span>
           E-poštni naslov
         </label>
-        <input 
-          id="email" 
-          type="email" 
-          formControlName="email" 
-          placeholder="ime@example.com" 
-          required
-          class="form-input"
-        >
+        <input id="email" type="email" formControlName="email" placeholder="ime@example.com" required
+          class="form-input">
         @if (checkoutForm.get('email')?.invalid && checkoutForm.get('email')?.touched) {
         <div class="error-message">
           <span class="error-icon">⚠️</span>
@@ -110,18 +92,11 @@
           <span class="label-icon">📱</span>
           Telefonska številka
         </label>
-        <input 
-          id="phone" 
-          type="tel" 
-          formControlName="phone" 
-          placeholder="+386 12 345 678" 
-          required
-          class="form-input"
-        >
+        <input id="phone" type="tel" formControlName="phone" placeholder="051 234 567" required class="form-input">
         @if (checkoutForm.get('phone')?.invalid && checkoutForm.get('phone')?.touched) {
         <div class="error-message">
           <span class="error-icon">⚠️</span>
-          Vnesite pravilno telefonsko številko.
+          Telefonska številka mora imeti 9 številk in se začeti z 0 (npr. 051 234 567).
         </div>
         }
       </div>
@@ -133,20 +108,13 @@
         <span class="section-icon">🏠</span>
         Dostavljavski naslov
       </h3>
-      
+
       <div class="form-group">
         <label for="address">
           <span class="label-icon">🏘️</span>
           Ulica in hišna številka
         </label>
-        <input 
-          id="address" 
-          type="text" 
-          formControlName="address" 
-          placeholder="Ulica 123" 
-          required
-          class="form-input"
-        >
+        <input id="address" type="text" formControlName="address" placeholder="Ulica 123" required class="form-input">
         @if (checkoutForm.get('address')?.invalid && checkoutForm.get('address')?.touched) {
         <div class="error-message">
           <span class="error-icon">⚠️</span>
@@ -161,14 +129,8 @@
             <span class="label-icon">📮</span>
             Poštna številka
           </label>
-          <input 
-            id="postalCode" 
-            type="number" 
-            formControlName="postalCode" 
-            placeholder="1000" 
-            required
-            class="form-input"
-          >
+          <input id="postalCode" type="number" formControlName="postalCode" placeholder="1000" required
+            class="form-input">
           @if (checkoutForm.get('postalCode')?.invalid && checkoutForm.get('postalCode')?.touched) {
           <div class="error-message">
             <span class="error-icon">⚠️</span>
@@ -182,14 +144,7 @@
             <span class="label-icon">🌆</span>
             Kraj
           </label>
-          <input 
-            id="city" 
-            type="text" 
-            formControlName="city" 
-            placeholder="Ljubljana" 
-            required
-            class="form-input"
-          >
+          <input id="city" type="text" formControlName="city" placeholder="Ljubljana" required class="form-input">
           @if (checkoutForm.get('city')?.invalid && checkoutForm.get('city')?.touched) {
           <div class="error-message">
             <span class="error-icon">⚠️</span>
@@ -206,19 +161,13 @@
         <span class="section-icon">🏢</span>
         Podjetje (neobvezno)
       </h3>
-      
+
       <div class="form-group">
         <label for="id-podjetja">
           <span class="label-icon">🆔</span>
           ID za DDV
         </label>
-        <input 
-          id="id-podjetja" 
-          type="text" 
-          formControlName="companyID" 
-          placeholder="SI12345678"
-          class="form-input"
-        >
+        <input id="id-podjetja" type="text" formControlName="companyID" placeholder="SI12345678" class="form-input">
       </div>
     </div>
 
@@ -236,14 +185,9 @@
           <span class="total-value">{{ total | number:'1.2-2' }} €</span>
         </div>
       </div>
-      
-      <button 
-        type="submit" 
-        [disabled]="checkoutForm.invalid" 
-        [routerLink]="['/payment-method']" 
-        (click)="onSubmit()"
-        class="checkout-btn"
-      >
+
+      <button type="submit" [disabled]="checkoutForm.invalid" [routerLink]="['/payment-method']" (click)="onSubmit()"
+        class="checkout-btn">
         <span class="btn-icon">💳</span>
         <span class="btn-text">Nadaljuj na plačilo</span>
         <span class="btn-arrow">→</span>
