@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const adminAuth = require('../middleware/adminAuth');
+const logger = require('../logger');
 const router = express.Router();
 
 // Create uploads directory if it doesn't exist
@@ -10,19 +11,6 @@ const uploadsDir = path.join(__dirname, '../uploads/images/products');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadsDir);
-    },
-    filename: (req, file, cb) => {
-        // Generate unique filename
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const fileExtension = path.extname(file.originalname);
-        cb(null, 'product-' + uniqueSuffix + fileExtension);
-    }
-});
 
 // Allowed file types mapping
 const ALLOWED_TYPES = {
@@ -32,8 +20,45 @@ const ALLOWED_TYPES = {
     'image/webp': ['.webp']
 };
 
-// Strict file filter with Magic Number verification
-const fileFilter = async (req, file, cb) => {
+// Magic keys for valid file types (first bytes)
+const MAGIC_NUMBERS = {
+    '.jpg': ['ffd8ff', 'ffd8'],
+    '.jpeg': ['ffd8ff', 'ffd8'],
+    '.png': ['89504e47'],
+    '.gif': ['47494638'],
+    '.webp': ['52494646'] // RIFF header, need to check further for WEBP
+};
+
+// Validate magic numbers from buffer
+const validateMagicNumbers = (buffer, extension) => {
+    if (!buffer || buffer.length < 4) return false;
+
+    const ext = extension.toLowerCase();
+    const magicNumbers = MAGIC_NUMBERS[ext];
+    if (!magicNumbers) return false;
+
+    // Check first bytes
+    const firstBytes = buffer.toString('hex', 0, Math.min(4, buffer.length));
+    
+    for (const magic of magicNumbers) {
+        if (firstBytes.startsWith(magic.toLowerCase())) {
+            // For WebP, need to check further (RIFF....WEBP)
+            if (ext === '.webp' && buffer.length >= 12) {
+                const webpCheck = buffer.toString('ascii', 8, 12);
+                return webpCheck === 'WEBP';
+            }
+            return true;
+        }
+    }
+
+    return false;
+};
+
+// Use memory storage to validate before saving to disk
+const memoryStorage = multer.memoryStorage();
+
+// Strict file filter
+const fileFilter = (req, file, cb) => {
     // 1. Initial extension/MIME check (fast fail)
     const fileExtension = path.extname(file.originalname).toLowerCase();
     const allowedExtensions = ALLOWED_TYPES[file.mimetype];
@@ -46,43 +71,17 @@ const fileFilter = async (req, file, cb) => {
 };
 
 const upload = multer({
-    storage: storage,
+    storage: memoryStorage, // Use memory storage to validate before saving
     fileFilter: fileFilter,
     limits: {
         fileSize: 5 * 1024 * 1024 // 5MB limit
     }
 });
 
-// Magic keys for valid file types
-const MAGIC_NUMBERS = {
-    jpg: 'ffd8ff',
-    png: '89504e47',
-    gif: '47494638',
-    webp: '52494646' // RIFF....WEBP
-};
-
-// Start of the file validation using magic numbers
-const validateFileContent = (filePath, extension) => {
-    try {
-        const buffer = fs.readFileSync(filePath);
-        if (!buffer || buffer.length < 4) return false;
-
-        const hex = buffer.toString('hex', 0, 4);
-
-        // Simple check for common types
-        if (extension === '.png' && hex === MAGIC_NUMBERS.png) return true;
-        if (extension === '.gif' && hex === MAGIC_NUMBERS.gif) return true;
-        if ((extension === '.jpg' || extension === '.jpeg') && buffer.toString('hex', 0, 3) === MAGIC_NUMBERS.jpg) return true;
-        if (extension === '.webp' && hex === MAGIC_NUMBERS.webp) return true;
-
-        return false;
-    } catch (e) {
-        return false;
-    }
-};
-
 // Upload image endpoint
 router.post('/upload', adminAuth, upload.single('file'), (req, res) => {
+    let savedFilePath = null;
+    
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -91,39 +90,55 @@ router.post('/upload', adminAuth, upload.single('file'), (req, res) => {
             });
         }
 
-        // Validate bytes
+        // Validate magic numbers from buffer (before saving to disk)
         const extension = path.extname(req.file.originalname).toLowerCase();
-        const isValid = validateFileContent(req.file.path, extension);
+        const isValid = validateMagicNumbers(req.file.buffer, extension);
 
         if (!isValid) {
-            // Delete the invalid file
-            fs.unlinkSync(req.file.path);
+            logger.warn('File upload rejected: Invalid magic numbers', {
+                extension,
+                mimetype: req.file.mimetype,
+                ip: req.ip
+            });
             return res.status(400).json({
                 success: false,
-                message: 'Invalid file content. Magic bytes do not match extension.'
+                message: 'Invalid file content. Magic bytes do not match file type.'
             });
         }
 
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const filename = 'product-' + uniqueSuffix + extension;
+        savedFilePath = path.join(uploadsDir, filename);
+
+        // Save file to disk only after validation
+        fs.writeFileSync(savedFilePath, req.file.buffer);
+
         // Create image URL
-        const imageUrl = `/images/${req.file.filename}`;
+        const imageUrl = `/images/${filename}`;
 
         res.json({
             success: true,
             message: 'Image uploaded successfully',
             imageUrl: imageUrl,
-            filename: req.file.filename
+            filename: filename
         });
     } catch (error) {
-        console.error('Upload error:', error);
-        // Try to clean up if file exists
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
+        logger.error('Upload error:', error);
+        // Try to clean up if file was saved
+        if (savedFilePath && fs.existsSync(savedFilePath)) {
+            try {
+                fs.unlinkSync(savedFilePath);
+            } catch (unlinkError) {
+                logger.error('Failed to delete uploaded file:', unlinkError);
+            }
         }
 
+        const isProduction = process.env.NODE_ENV === 'production';
         res.status(500).json({
             success: false,
             message: 'Error uploading image',
-            error: error.message
+            ...(isProduction ? {} : { error: error.message })
         });
     }
 });
@@ -167,11 +182,12 @@ router.delete('/delete/:filename', adminAuth, (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Delete error:', error);
+        logger.error('Delete error:', error);
+        const isProduction = process.env.NODE_ENV === 'production';
         res.status(500).json({
             success: false,
             message: 'Error deleting image',
-            error: error.message
+            ...(isProduction ? {} : { error: error.message })
         });
     }
 });

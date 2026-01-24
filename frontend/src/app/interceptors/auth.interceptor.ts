@@ -9,7 +9,7 @@ import { UserService } from '../service/user.service';
  * HTTP Interceptor that automatically handles authentication for all HTTP requests.
  * 
  * This interceptor is used in the app.config.:
- * - Automatically attaches Bearer tokens to outgoing requests
+ * - Automatically attaches CSRF tokens to outgoing requests
  * - Handles 401 Unauthorized responses by clearing tokens and redirecting to login
  * - Ensures consistent authentication behavior across the application
  * 
@@ -29,9 +29,37 @@ export function authInterceptor(request: HttpRequest<unknown>,
   const router = inject(Router);
   const injector = inject(Injector);
 
-  // Clone the request to enable credentials (cookies)
+  // Get CSRF token from cookie
+  const getCsrfToken = (): string | null => {
+    const name = 'csrf-token=';
+    // gets cookie value
+    const decodedCookie = decodeURIComponent(document.cookie);
+    const ca = decodedCookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) === 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return null;
+  };
+
+  // Build headers with CSRF token for state-changing requests
+  const headers: { [key: string]: string } = {};
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
+  // Clone the request to enable credentials (cookies) and add CSRF token
   const modifiedRequest = request.clone({
-    withCredentials: true
+    withCredentials: true,
+    setHeaders: headers
   });
 
   // Handle the request and catch any authentication errors

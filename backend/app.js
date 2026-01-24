@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
 
 const logger = require('./logger');
+const CSRFProtection = require('./middleware/csrf');
 
 // Load environment variables
 const envPath = process.env.ENV_PATH;
@@ -61,13 +62,19 @@ const corsOptions = {
       // Allow all origins in dev if FRONTEND_URL is not set
       return callback(null, true);
     }
+
+    // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     } else {
+      logger.warn('CORS: Origin not allowed', { origin, allowedOrigins });
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true // Allow cookies for CSRF protection
+  credentials: true, // Allow cookies for CSRF protection
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  exposedHeaders: ['X-CSRF-Token']
 };
 
 // Middleware
@@ -91,6 +98,11 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
+
+// CSRF Protection - Generate token for all requests
+app.use(CSRFProtection.generateTokenMiddleware);
+// CSRF Protection - Validate token for state-changing requests
+app.use('/api/', CSRFProtection.validateTokenMiddleware);
 
 // --- Rate Limiting ---
 // Global rate limiter for all API routes
@@ -142,8 +154,29 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  logger.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  // Log full error details (including stack) only in development
+  if (isProduction) {
+    logger.error('Error occurred:', {
+      message: err.message,
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
+  } else {
+    logger.error('Error occurred:', {
+      message: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      ip: req.ip
+    });
+  }
+
+  // Always return generic error message to client
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({ 
+    error: isProduction ? 'Something went wrong!' : err.message 
+  });
 });
 
 // 404 handler

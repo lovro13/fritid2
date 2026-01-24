@@ -1,7 +1,9 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { authenticateToken } = require('../middleware/auth');
 const adminAuth = require('../middleware/adminAuth');
+const logger = require('../logger');
 
 const router = express.Router();
 
@@ -11,7 +13,7 @@ router.get('/', adminAuth, async (req, res) => {
         const users = await User.findAll();
         res.json(users.map(user => user.toJSON()));
     } catch (error) {
-        console.error('Error fetching users:', error);
+        logger.error('Error fetching users:', error);
         res.status(500).json({ error: 'Napaka pri pridobivanju uporabnikov' });
     }
 });
@@ -30,7 +32,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
         res.json(user.toJSON());
     } catch (error) {
-        console.error('Error fetching user:', error);
+        logger.error('Error fetching user by ID:', error);
         res.status(500).json({ error: 'Napaka pri pridobivanju uporabnika' });
     }
 });
@@ -44,7 +46,7 @@ router.get('/email/:email', adminAuth, async (req, res) => {
         }
         res.json(user.toJSON());
     } catch (error) {
-        console.error('Error fetching user:', error);
+        logger.error('Error fetching user by email:', error);
         res.status(500).json({ error: 'Napaka pri pridobivanju uporabnika' });
     }
 });
@@ -59,7 +61,7 @@ router.get('/exists/email/:email', async (req, res) => {
         ]);
         res.json({ exists, validDomain });
     } catch (error) {
-        console.error('Error checking email:', error);
+        logger.error('Error checking email:', error);
         res.status(500).json({ error: 'Napaka pri preverjanju e-poštnega naslova' });
     }
 });
@@ -70,7 +72,18 @@ router.post('/', (req, res) => {
 });
 
 // Update user
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, [
+    body('firstName').optional().trim().isLength({ min: 1, max: 50 }).escape().withMessage('First name must be 1-50 characters'),
+    body('lastName').optional().trim().isLength({ min: 1, max: 50 }).escape().withMessage('Last name must be 1-50 characters'),
+    body('email').optional().isEmail().trim().toLowerCase().withMessage('Valid email is required')
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn('User update validation failed', { errors: errors.array(), userId: req.params.id });
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         // Check ownership: users can only update their own profile, admins can update all
         if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
@@ -81,22 +94,49 @@ router.put('/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Uporabnik ni bil najden' });
         }
 
+        // Check if email is being changed and if it already exists
+        if (req.body.email && req.body.email !== user.email) {
+            const emailExists = await User.emailExists(req.body.email);
+            if (emailExists) {
+                return res.status(409).json({ error: 'E-poštni naslov že obstaja' });
+            }
+        }
+
         // Update user properties
         const { firstName, lastName, email } = req.body;
-        if (firstName) user.firstName = firstName;
-        if (lastName) user.lastName = lastName;
-        if (email) user.email = email;
+        if (firstName !== undefined) user.firstName = firstName;
+        if (lastName !== undefined) user.lastName = lastName;
+        if (email !== undefined) user.email = email;
 
         await user.save();
         res.json(user.toJSON());
     } catch (error) {
-        console.error('Error updating user:', error);
+        logger.error('Error updating user:', error);
         res.status(500).json({ error: 'Napaka pri posodabljanju uporabnika' });
     }
 });
 
 // Update user profile
-router.put('/:id/profile', authenticateToken, async (req, res) => {
+router.put('/:id/profile', authenticateToken, [
+    body('address').optional().trim().isLength({ min: 5, max: 100 }).escape().withMessage('Address must be 5-100 characters'),
+    body('postalCode').optional().trim().matches(/^[1-9]\d{3}$/).withMessage('Valid postal code is required (4 digits, 1000-9999)'),
+    body('city').optional().trim().isLength({ min: 2, max: 50 }).escape().withMessage('City must be 2-50 characters'),
+    body('phoneNumber').optional().trim().custom((value) => {
+        if (!value) return true;
+        const cleaned = value.replace(/\s/g, '');
+        if (!/^0\d{8}$/.test(cleaned)) {
+            throw new Error('Phone number must contain 9 digits and start with 0');
+        }
+        return true;
+    })
+], async (req, res) => {
+    // Check validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        logger.warn('User profile update validation failed', { errors: errors.array(), userId: req.params.id });
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     try {
         // Check ownership: users can only update their own profile, admins can update all
         if (req.params.id !== req.user.id.toString() && req.user.role !== 'admin') {
@@ -117,7 +157,7 @@ router.put('/:id/profile', authenticateToken, async (req, res) => {
         await user.save();
         res.json(user.toJSON());
     } catch (error) {
-        console.error('Error updating user profile:', error);
+        logger.error('Error updating user profile:', error);
         res.status(500).json({ error: 'Napaka pri posodabljanju profila' });
     }
 });
@@ -135,7 +175,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         }
         res.status(204).send();
     } catch (error) {
-        console.error('Error deleting user:', error);
+        logger.error('Error deleting user:', error);
         res.status(500).json({ error: 'Napaka pri brisanju uporabnika' });
     }
 });

@@ -89,3 +89,5 @@ backend/minimax_api_controller.http
 /frontend/dist/
 
 diagram.drawio
+backend/tsconfig.json
+backend/dist/

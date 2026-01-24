@@ -1,4 +1,5 @@
 const { getPool } = require('./dbModel');
+const logger = require('../logger');
 
 class Product {
     constructor(productData) {
@@ -22,7 +23,7 @@ class Product {
                 this.colors = [];
             }
         } catch (error) {
-            console.warn('Failed to parse colors for product', productData.id, ':', productData.colors);
+            logger.warn('Failed to parse colors for product', { productId: productData.id, colors: productData.colors });
             // If it's the problematic "[deafult]" text, convert it to a proper array
             if (productData.colors === '[deafult]' || productData.colors === '[default]') {
                 this.colors = ['Default'];
@@ -30,7 +31,6 @@ class Product {
                 this.colors = [];
             }
         }
-        console.log('Parsed colors:', this.colors);
         this.minimax_id = productData.minimax_id;
         this.category = productData.category;
         this.stock_quantity = productData.stock_quantity;
@@ -39,21 +39,21 @@ class Product {
     }
 
     static async findAllActive() {
-        const [rows] = await getPool().query(
+        const [rows] = await getPool().execute(
             'SELECT * FROM products WHERE is_active = 1 ORDER BY id DESC'
         );
         return rows;
     }
 
     static async findAll() {
-        const [rows] = await getPool().query(
+        const [rows] = await getPool().execute(
             'SELECT * FROM products ORDER BY id DESC'
         );
         return rows;
     }
 
     static async findById(id) {
-        const [rows] = await getPool().query(
+        const [rows] = await getPool().execute(
             'SELECT * FROM products WHERE id = ? LIMIT 1', [id]
         );
         return rows[0] || null;
@@ -61,7 +61,7 @@ class Product {
 
     static async search(q) {
         const like = `%${q}%`;
-        const [rows] = await getPool().query(
+        const [rows] = await getPool().execute(
             'SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ?) ORDER BY id DESC',
             [like, like]
         );
@@ -69,7 +69,7 @@ class Product {
     }
 
     static async findByPriceRange(minPrice, maxPrice) {
-        const [rows] = await getPool().query(
+        const [rows] = await getPool().execute(
             'SELECT * FROM products WHERE is_active = 1 AND price BETWEEN ? AND ? ORDER BY price ASC',
             [minPrice, maxPrice]
         );
@@ -78,7 +78,7 @@ class Product {
 
     static async create(data) {
         const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
-        const [res] = await getPool().query(
+        const [res] = await getPool().execute(
             `INSERT INTO products
              (name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -98,13 +98,13 @@ class Product {
     }
 
     static async delete(id) {
-        const [res] = await getPool().query('DELETE FROM products WHERE id = ?', [id]);
+        const [res] = await getPool().execute('DELETE FROM products WHERE id = ?', [id]);
         return res.affectedRows > 0;
     }
 
     static async update(id, data) {
         const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
-        const [res] = await getPool().query(
+        const [res] = await getPool().execute(
             `UPDATE products SET 
              name = ?,
              description = ?,

@@ -12,7 +12,6 @@ const MailService = require('../services/mailService');
 const glsService = require('../services/glsService');
 const logger = require('../logger');
 const path = require('path');
-const { log } = require('console');
 
 const router = express.Router();
 
@@ -24,7 +23,7 @@ router.get('/', adminAuth, async (req, res) => {
         logger.info(`Fetched ${orders.length} orders`);
         res.json(orders);
     } catch (error) {
-        console.error('Error fetching orders:', error);
+        logger.error('Error fetching orders:', error);
         res.status(500).json({ error: 'Failed to fetch orders' });
     }
 });
@@ -45,7 +44,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         await order.loadOrderItems();
         res.json(order);
     } catch (error) {
-        console.error('Error fetching order:', error);
+        logger.error('Error fetching order:', error);
         res.status(500).json({ error: 'Failed to fetch order' });
     }
 });
@@ -68,7 +67,7 @@ router.get('/user/:userId', authenticateToken, async (req, res) => {
         );
         res.json(ordersWithItems);
     } catch (error) {
-        console.error('Error fetching user orders:', error);
+        logger.error('Error fetching user orders:', error);
         res.status(500).json({ error: 'Failed to fetch user orders' });
     }
 });
@@ -241,7 +240,11 @@ router.post('/', [
         return;
     } catch (error) {
         logger.error('Checkout error:', error);
-        res.status(500).json({ error: 'Failed to process checkout', details: error.message });
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.status(500).json({ 
+            error: 'Failed to process checkout',
+            ...(isProduction ? {} : { details: error.message })
+        });
     }
 });
 
@@ -262,7 +265,7 @@ router.put('/:id/status', adminAuth, async (req, res) => {
         await order.updateStatus(status);
         res.json(order);
     } catch (error) {
-        console.error('dminAuth, aError updating order status:', error);
+        logger.error('Error updating order status:', error);
         res.status(500).json({ error: 'Failed to update order status' });
     }
 });
@@ -276,7 +279,7 @@ router.delete('/:id', adminAuth, async (req, res) => {
         }
         res.status(204).send();
     } catch (error) {
-        console.error('Error deleting order:', error);
+        logger.error('Error deleting order:', error);
         res.status(500).json({ error: 'Failed to delete order' });
     }
 });

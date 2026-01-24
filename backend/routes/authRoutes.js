@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const logger = require('../logger');
+const JWTService = require('../services/jwtService');
 const router = express.Router();
 
 // Register
@@ -59,18 +60,15 @@ router.post('/register', [
             existingUser.city = city;
             await existingUser.save();
 
-            // Generate JWT token
-            const token = jwt.sign(
-                { id: existingUser.id, email: existingUser.email, role: existingUser.role },
-                process.env.JWT_SECRET,
-                { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-            );
+            // Generate JWT token using JWTService
+            const token = JWTService.generateToken(existingUser);
 
-            // Set HttpOnly cookie
+            // Set HttpOnly cookie with strict sameSite in production
+            const isProduction = process.env.NODE_ENV === 'production';
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-                sameSite: 'lax', // Relaxed for better compatibility (especially local dev)
+                secure: isProduction,
+                sameSite: isProduction ? 'strict' : 'lax', // Strict in production for better security
                 maxAge: 24 * 60 * 60 * 1000 // 24 hours
             });
 
@@ -82,18 +80,15 @@ router.post('/register', [
             // Create new user
             const user = await User.create({ firstName, lastName, email, password, phoneNumber, address, postalCode, city });
 
-            // Generate JWT token
-            const token = jwt.sign(
-                { id: user.id, email: user.email, role: user.role },
-                process.env.JWT_SECRET,
-                { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-            );
+            // Generate JWT token using JWTService
+            const token = JWTService.generateToken(user);
 
-            // Set HttpOnly cookie
+            // Set HttpOnly cookie with strict sameSite in production
+            const isProduction = process.env.NODE_ENV === 'production';
             res.cookie('token', token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
+                secure: isProduction,
+                sameSite: isProduction ? 'strict' : 'lax',
                 maxAge: 24 * 60 * 60 * 1000
             });
 
@@ -103,7 +98,7 @@ router.post('/register', [
             });
         }
     } catch (error) {
-        console.error('Registration error:', error);
+        logger.error('Registration error:', error);
         logger.warn(`Failed registration attempt for email: ${req.body.email} from IP: ${req.ip}`);
         res.status(500).json({ error: 'Napaka pri ustvarjanju uporabnika' });
     }
@@ -143,18 +138,15 @@ router.post('/login', [
             return res.status(401).json({ error: 'Neveljavni podatki za prijavo' });
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { id: user.id, email: user.email, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-        );
+        // Generate JWT token using JWTService
+        const token = JWTService.generateToken(user);
 
-        // Set HttpOnly cookie
+        // Set HttpOnly cookie with strict sameSite in production
+        const isProduction = process.env.NODE_ENV === 'production';
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
             maxAge: 24 * 60 * 60 * 1000
         });
 
@@ -165,7 +157,7 @@ router.post('/login', [
             user: user.toJSON()
         });
     } catch (error) {
-        console.error('Login error:', error);
+        logger.error('Login error:', error);
         res.status(500).json({ error: 'Napaka pri prijavi' });
     }
 });
@@ -189,12 +181,48 @@ router.post('/verify', (req, res) => {
     }
 });
 
+// Refresh token endpoint
+router.post('/refresh', async (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        // Verify token
+        const decoded = JWTService.verifyToken(token);
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Generate new token (token rotation)
+        const newToken = JWTService.generateToken(user);
+
+        // Set new token cookie
+        const isProduction = process.env.NODE_ENV === 'production';
+        res.cookie('token', newToken, {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: isProduction ? 'strict' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+        });
+
+        res.json({ success: true, message: 'Token refreshed' });
+    } catch (error) {
+        logger.warn('Token refresh failed:', error.message);
+        res.status(401).json({ error: 'Invalid or expired token' });
+    }
+});
+
 // Logout
 router.post('/logout', (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
     res.clearCookie('token', {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
+        secure: isProduction,
+        sameSite: isProduction ? 'strict' : 'lax'
     });
     res.json({ success: true, message: 'Odjava uspešna' });
 });

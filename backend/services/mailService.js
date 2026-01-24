@@ -3,6 +3,24 @@ const logger = require('../logger');
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Escape HTML entities to prevent XSS attacks
+ * @param {string} text - Text to escape
+ * @returns {string} - Escaped text
+ */
+function escapeHtml(text) {
+    if (typeof text !== 'string') {
+        text = String(text);
+    }
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, (m) => map[m]);
+}
 
 class MailService {
     constructor() {
@@ -54,15 +72,15 @@ class MailService {
                 }
             }
 
-            // Generate order items HTML
+            // Generate order items HTML with escaped user data
             const subtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const orderItemsHtml = order.orderItems.map(item => `
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                        ${item.productName}${item.color ? ` - ${item.color}` : ''}
+                        ${escapeHtml(item.productName)}${item.color ? ` - ${escapeHtml(item.color)}` : ''}
                     </td>
                     <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">
-                        ${item.quantity}
+                        ${escapeHtml(String(item.quantity))}
                     </td>
                     <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
                         ${item.price.toFixed(2)} EUR
@@ -85,9 +103,9 @@ class MailService {
                 <div class="payment-info upn" style="background-color: #e3f2fd; padding: 15px; border-left: 4px solid #2196F3; margin: 15px 0; border-radius: 5px;">
                     <strong>💳 Način plačila:</strong> UPN nalog (bančno nakazilo)
                     <p style="margin: 10px 0 0 0;">
-                        <strong>TRR:</strong> ${process.env.COMPANY_BANK_ACCOUNT || 'SI56 XXXX XXXX XXXX XXX'}<br>
-                        <strong>Referenca:</strong> SI00 ${order.id}<br>
-                        <strong>Namen:</strong> Naročilo #${order.id}
+                        <strong>TRR:</strong> ${escapeHtml(process.env.COMPANY_BANK_ACCOUNT || 'SI56 XXXX XXXX XXXX XXX')}<br>
+                        <strong>Referenca:</strong> SI00 ${escapeHtml(String(order.id))}<br>
+                        <strong>Namen:</strong> Naročilo #${escapeHtml(String(order.id))}
                     </p>
                 </div>
                 <div class="important" style="background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 15px 0; border-radius: 5px;">
@@ -116,20 +134,20 @@ class MailService {
                 <p>Poslali vam bomo še eno e-pošto, ko bo vaše naročilo odposlano.</p>`;
             }
 
-            // Replace variables in template
+            // Replace variables in template with escaped user data
             let htmlContent = this.templates.orderConfirmation
-                .replace('{{title}}', title)
-                .replace(/{{firstName}}/g, order.shippingFirstName)
-                .replace(/{{lastName}}/g, order.shippingLastName)
-                .replace('{{introText}}', introText)
-                .replace('{{paymentInfoHtml}}', paymentInfoHtml)
-                .replace(/{{orderId}}/g, order.id)
-                .replace('{{orderDate}}', new Date(order.createdAt).toLocaleDateString('sl-SI', { year: 'numeric', month: 'long', day: 'numeric' }))
-                .replace('{{address}}', order.shippingAddress)
-                .replace('{{postalCode}}', order.shippingPostalCode)
-                .replace('{{city}}', order.shippingCity)
-                .replace('{{orderItemsHtml}}', orderItemsHtml)
-                .replace('{{totalLabel}}', upn ? 'Za plačilo:' : 'Skupaj:')
+                .replace('{{title}}', escapeHtml(title))
+                .replace(/{{firstName}}/g, escapeHtml(order.shippingFirstName))
+                .replace(/{{lastName}}/g, escapeHtml(order.shippingLastName))
+                .replace('{{introText}}', escapeHtml(introText))
+                .replace('{{paymentInfoHtml}}', paymentInfoHtml) // Already contains escaped order.id
+                .replace(/{{orderId}}/g, escapeHtml(String(order.id)))
+                .replace('{{orderDate}}', escapeHtml(new Date(order.createdAt).toLocaleDateString('sl-SI', { year: 'numeric', month: 'long', day: 'numeric' })))
+                .replace('{{address}}', escapeHtml(order.shippingAddress))
+                .replace('{{postalCode}}', escapeHtml(order.shippingPostalCode))
+                .replace('{{city}}', escapeHtml(order.shippingCity))
+                .replace('{{orderItemsHtml}}', orderItemsHtml) // Already escaped
+                .replace('{{totalLabel}}', escapeHtml(upn ? 'Za plačilo:' : 'Skupaj:'))
                 .replace('{{totalAmount}}', (order.totalAmount + 5.99).toFixed(2))
                 .replace('{{additionalInstructionsHtml}}', additionalInstructionsHtml);
 
@@ -193,19 +211,19 @@ class MailService {
                 `${item.productName}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`
             ).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: 5.99 EUR`;
 
-            // Replace variables in template
+            // Replace variables in template with escaped user data
             let htmlContent = this.templates.ownerNotification
-                .replace(/{{orderId}}/g, order.id)
-                .replace('{{orderDate}}', new Date(order.createdAt).toLocaleDateString('sl-SI', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }))
-                .replace('{{status}}', order.status)
-                .replace('{{firstName}}', order.shippingFirstName)
-                .replace('{{lastName}}', order.shippingLastName)
-                .replace('{{email}}', order.shippingEmail)
-                .replace('{{phone}}', order.shippingPhoneNumber)
-                .replace('{{address}}', order.shippingAddress)
-                .replace('{{postalCode}}', order.shippingPostalCode)
-                .replace('{{city}}', order.shippingCity)
-                .replace('{{orderItemsText}}', orderItemsText)
+                .replace(/{{orderId}}/g, escapeHtml(String(order.id)))
+                .replace('{{orderDate}}', escapeHtml(new Date(order.createdAt).toLocaleDateString('sl-SI', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })))
+                .replace('{{status}}', escapeHtml(order.status))
+                .replace('{{firstName}}', escapeHtml(order.shippingFirstName))
+                .replace('{{lastName}}', escapeHtml(order.shippingLastName))
+                .replace('{{email}}', escapeHtml(order.shippingEmail))
+                .replace('{{phone}}', escapeHtml(order.shippingPhoneNumber))
+                .replace('{{address}}', escapeHtml(order.shippingAddress))
+                .replace('{{postalCode}}', escapeHtml(order.shippingPostalCode))
+                .replace('{{city}}', escapeHtml(order.shippingCity))
+                .replace('{{orderItemsText}}', escapeHtml(orderItemsText))
                 .replace('{{totalAmount}}', order.totalAmount.toFixed(2));
 
             const ownerEmail = process.env.OWNER_EMAIL;
@@ -221,7 +239,7 @@ class MailService {
             const mailOptions = {
                 from: `"Fritid Sistem" <${process.env.MAIL_USER}>`,
                 to: ownerEmail,
-                subject: `🔔 Novo naročilo #${order.id} - ${order.shippingFirstName} ${order.shippingLastName}`,
+                subject: `🔔 Novo naročilo #${order.id} - ${escapeHtml(order.shippingFirstName)} ${escapeHtml(order.shippingLastName)}`,
                 text: `Novo naročilo #${order.id} od ${order.shippingFirstName} ${order.shippingLastName}`,
                 html: htmlContent,
                 attachments: glsLabelPath ? [{
