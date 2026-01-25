@@ -1,14 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
+import type { Request, Response, NextFunction } from 'express';
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import path from 'path';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import cookieParser from 'cookie-parser';
 
-const logger = require('./logger');
-const CSRFProtection = require('./middleware/csrf');
+import logger from './logger';
+import CSRFProtection from './middleware/csrf';
 
 // Load environment variables
 const envPath = process.env.ENV_PATH;
@@ -26,27 +26,27 @@ if (process.env.JWT_SECRET.length < 32) {
 }
 
 // Import database initialization
-logger.info(process.env.NODE_ENV)
-const { initializeDatabase } = require('./models/dbModel');
+logger.info(process.env.NODE_ENV);
+import { initializeDatabase } from './models/dbModel';
 
 // Import routes
-const userRoutes = require('./routes/userRoutes');
-const productRoutes = require('./routes/productRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const imageRoutes = require('./routes/imageRoutes');
+import userRoutes from './routes/userRoutes';
+import productRoutes from './routes/productRoutes';
+import orderRoutes from './routes/orderRoutes';
+import authRoutes from './routes/authRoutes';
+import adminRoutes from './routes/adminRoutes';
+import imageRoutes from './routes/imageRoutes';
 
 const app = express();
 const PORT = process.env.PORT;
 
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = process.env.FRONTEND_URL;
+const allowedOrigins = process.env.FRONTEND_URL || '';
 
 // --- HTTPS Enforcement ---
 if (isProduction) {
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.header('x-forwarded-proto') !== 'https') {
       res.redirect(`https://${req.header('host')}${req.url}`);
     } else {
@@ -56,7 +56,7 @@ if (isProduction) {
 }
 
 const corsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -81,13 +81,13 @@ const corsOptions = {
 
 // Middleware
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", 'data:', 'https:'],
     },
   },
   hsts: {
@@ -135,15 +135,11 @@ const backendDir = path.basename(__dirname) === 'dist' ? path.resolve(__dirname,
 const uploadsDir = path.resolve(backendDir, 'uploads/images/products');
 const legacyUploadsDir = path.resolve(backendDir, 'dist/uploads/images/products');
 
-
-
 // Serve static images with CORS headers
 app.use('/api/images', cors(corsOptions), express.static(uploadsDir), express.static(legacyUploadsDir));
 
 // Initialize database
 initializeDatabase();
-
-
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -154,12 +150,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/images', imageRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'OK', message: 'Fritid Backend is running' });
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // Log full error details (including stack) only in development
   if (isProduction) {
     logger.error('Error occurred:', {
@@ -180,13 +176,13 @@ app.use((err, req, res, next) => {
 
   // Always return generic error message to client
   const statusCode = err.statusCode || err.status || 500;
-  res.status(statusCode).json({ 
-    error: isProduction ? 'Something went wrong!' : err.message 
+  res.status(statusCode).json({
+    error: isProduction ? 'Something went wrong!' : err.message
   });
 });
 
 // 404 handler
-app.use('*', (req, res) => {
+app.use('*', (req: Request, res: Response) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
@@ -194,5 +190,5 @@ app.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`);
 });
 
-module.exports = app;
-logger.info("Succesfuly made endpoints with no error found!")
+export default app;
+logger.info('Succesfuly made endpoints with no error found!');
