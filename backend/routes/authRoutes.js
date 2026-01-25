@@ -48,33 +48,10 @@ router.post('/register', [
         if (existingUser && existingUser.passwordHash != null) {
             return res.status(409).json({ message: 'Uporabnik s tem e-poštnim naslovom že obstaja' });
         } else if (existingUser && existingUser.passwordHash == null) {
-            // User exists but has no password, initialize password and update address info
-            await existingUser.initPassword(password);
-
-            // Update address information
-            existingUser.firstName = firstName;
-            existingUser.lastName = lastName;
-            existingUser.phoneNumber = phoneNumber;
-            existingUser.address = address;
-            existingUser.postalCode = postalCode;
-            existingUser.city = city;
-            await existingUser.save();
-
-            // Generate JWT token using JWTService
-            const token = JWTService.generateToken(existingUser);
-
-            // Set HttpOnly cookie with strict sameSite in production
-            const isProduction = process.env.NODE_ENV === 'production';
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: isProduction,
-                sameSite: isProduction ? 'strict' : 'lax', // Strict in production for better security
-                maxAge: 24 * 60 * 60 * 1000 // 24 hours
-            });
-
-            return res.status(200).json({
-                message: 'Geslo je bilo uspešno nastavljeno',
-                user: existingUser.toJSON()
+            // Guest user exists; block direct password setup without verification
+            logger.warn(`Registration blocked for existing guest account: ${email} from IP: ${req.ip}`);
+            return res.status(409).json({
+                message: 'Račun s tem e‑poštnim naslovom že obstaja kot gost. Prosimo, prijavite se ali uporabite postopek potrditve e‑pošte.'
             });
         } else {
             // Create new user

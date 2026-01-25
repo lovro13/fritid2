@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const JWTService = require('../services/jwtService');
 
 const authenticateToken = (req, res, next) => {
     // Only accept tokens from HttpOnly cookies
@@ -8,13 +8,13 @@ const authenticateToken = (req, res, next) => {
         return res.status(401).json({ error: 'Access token required' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ error: 'Invalid or expired token' });
-        }
-        req.user = user;
+    try {
+        const decoded = JWTService.verifyToken(token);
+        req.user = decoded;
         next();
-    });
+    } catch (error) {
+        return res.status(403).json({ error: 'Invalid or expired token' });
+    }
 };
 
 module.exports = {

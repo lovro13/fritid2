@@ -158,6 +158,10 @@ export class ProductManagementComponent implements OnInit {
 
     try {
       const headers: HeadersInit = {};
+      const csrfToken = this.getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
 
       const response = await fetch(`${environment.apiBase}/images/upload`, {
         method: 'POST',
@@ -185,6 +189,22 @@ export class ProductManagementComponent implements OnInit {
     } finally {
       this.isUploading = false;
     }
+  }
+
+  private getCsrfToken(): string | null {
+    const name = 'csrf-token=';
+    const decodedCookie = decodeURIComponent(document.cookie || '');
+    const parts = decodedCookie.split(';');
+    for (let i = 0; i < parts.length; i++) {
+      let c = parts[i];
+      while (c.charAt(0) === ' ') {
+        c = c.substring(1);
+      }
+      if (c.indexOf(name) === 0) {
+        return c.substring(name.length, c.length);
+      }
+    }
+    return null;
   }
 
   async onSubmit(): Promise<void> {

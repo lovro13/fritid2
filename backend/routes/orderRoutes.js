@@ -10,10 +10,12 @@ const { createInvoiceForOrder } = require('../services/minimaxService');
 const { create_order_and_send_issue_to_mmax } = require('../services/orderService');
 const MailService = require('../services/mailService');
 const glsService = require('../services/glsService');
+const JWTService = require('../services/jwtService');
 const logger = require('../logger');
 const path = require('path');
 
 const router = express.Router();
+const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
 
 // Get all orders
 router.get('/', adminAuth, async (req, res) => {
@@ -93,19 +95,32 @@ router.post('/', [
         return res.status(400).json({ errors: errors.array() });
     }
 
-    logger.info('Processing checkout request', { body: req.body });
+    logger.info('Processing checkout request', { email: req.body?.personInfo?.email, itemCount: req.body?.cartItems?.length, ip: req.ip });
     // EXTRACT BODY PARAMETERS
     const { personInfo, cartItems, typeOfOrder } = req.body;
-    logger.info('Checkout data received', { personInfo, cartItems, typeOfOrder });
+    logger.info('Checkout data received', { email: personInfo?.email, itemCount: cartItems?.length, typeOfOrder });
 
     try {
         // CREATE USER IF NOT EXISTS OR GET USER ID If EXISTS
         let user = await User.findByEmail(personInfo.email);
         let userId;
+        let shouldUpdateUser = false;
 
         if (user != null) {
+            const isRegisteredUser = Boolean(user.passwordHash) && user.role !== 'guest';
+            let isAuthenticatedForUser = false;
+            if (req.cookies?.token) {
+                try {
+                    const decoded = JWTService.verifyToken(req.cookies.token);
+                    isAuthenticatedForUser = decoded.id === user.id;
+                } catch (error) {
+                    isAuthenticatedForUser = false;
+                }
+            }
+
             logger.info("Found existing user via email", user.id);
             userId = user.id;
+            shouldUpdateUser = isRegisteredUser && isAuthenticatedForUser;
         } else {
             logger.info("Creating new user from shipping info");
             user = await User.create({
@@ -113,26 +128,23 @@ router.post('/', [
                 lastName: personInfo.lastName,
                 email: personInfo.email,
                 password: null, // Leave password null
-                role: 'user'
+                role: 'guest'
             });
 
             userId = user.id;
+            shouldUpdateUser = true;
             logger.info("Created new user with ID:", userId);
         }
 
-        // Update user address info
-        user.address = personInfo.address;
-        user.postalCode = personInfo.postalCode;
-        user.city = personInfo.city;
-        user.phoneNumber = personInfo.phone;
-        logger.info("Saving user with updated info for user ID:", userId);
-        await user.save();
-
-        // CREATE ORDER
-        // Calculate total amount
-        const totalAmount = cartItems.reduce((sum, item) => {
-            return sum + (item.product.price * item.quantity);
-        }, 0);
+        // Update user address info only for guests or authenticated users
+        if (shouldUpdateUser) {
+            user.address = personInfo.address;
+            user.postalCode = personInfo.postalCode;
+            user.city = personInfo.city;
+            user.phoneNumber = personInfo.phone;
+            logger.info("Saving user with updated info for user ID:", userId);
+            await user.save();
+        }
 
         // Map frontend payment type to database enum
         let paymentMethod = 'DELIVERY'; // Default
@@ -142,6 +154,29 @@ router.post('/', [
             paymentMethod = 'DELIVERY';
         }
         logger.info("Mapped payment type:", typeOfOrder, "->", paymentMethod);
+
+        // Check cart items against database products and compute totals
+        const cartItemsProducts = [];
+        let subtotal = 0;
+        logger.info("Verifying cart items against database products");
+        for (const item of cartItems) {
+            const productId = Number(item?.product?.id);
+            const product = await Product.findById(productId);
+            if (!product) {
+                throw new Error(`Product with ID ${productId} not found in database`);
+            }
+
+            subtotal += product.price * item.quantity;
+
+            // Create order item in database
+            // Combine product details from DB with quantity from request
+            cartItemsProducts.push({
+                ...product,
+                quantity: item.quantity
+            });
+        }
+        
+        const totalAmount = subtotal + SHIPPING_FEE;
 
         // Create order
         logger.info("Creating order for user ID:", userId);
@@ -163,16 +198,13 @@ router.post('/', [
         }
         logger.info("Order created successfully with ID:", order.id);
 
-        // Check cart items against database products and create order items
-        const cartItemsProducts = []
-        logger.info("Verifying cart items against database products");
+        // Create order items after order exists
         for (const item of cartItems) {
-            const product = await Product.findById(item.product.id);
+            const productId = Number(item?.product?.id);
+            const product = cartItemsProducts.find(p => p.id === productId);
             if (!product) {
-                throw new Error(`Product with ID ${item.product.id} not found in database`);
+                throw new Error(`Product with ID ${productId} not found in cart verification`);
             }
-
-            // Create order item in database
             await OrderItem.create({
                 orderId: order.id,
                 productId: product.id,
@@ -181,13 +213,8 @@ router.post('/', [
                 color: item.selectedColor || null
             });
             logger.info(`Created order item for product ${product.id} with color: ${item.selectedColor}`);
-
-            // Combine product details from DB with quantity from request
-            cartItemsProducts.push({
-                ...product,
-                quantity: item.quantity
-            });
         }
+
         logger.info("All cart items verified and order items created in database");
         const minimax_invoice_result = await create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts });
 

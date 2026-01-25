@@ -38,7 +38,7 @@ export class ProductDetailComponent implements OnInit {
             this.product = product;
             this.selectedColor = product.colors && product.colors.length > 0 ? product.colors[0] : '';
             console.log("Product loaded:", product);
-            this.image_url = `${environment.apiBase}${this.product?.image_url}`;
+            this.image_url = this.getImageUrl(this.product?.image_url || '');
             console.log(this.image_url);
           } else {
             this.error = "Product not found";
@@ -56,6 +56,24 @@ export class ProductDetailComponent implements OnInit {
       this.error = "Product ID not found in route";
       console.error("Product id not found in route");
     }
+  }
+
+  private getImageUrl(imageUrl: string): string {
+    if (!imageUrl) return '';
+
+    if (imageUrl.startsWith('http')) {
+      return imageUrl;
+    }
+
+    if (imageUrl.startsWith('/api/images/')) {
+      return imageUrl;
+    }
+
+    if (imageUrl.startsWith('/images/')) {
+      return `${environment.apiBase}${imageUrl}`;
+    }
+
+    return `${environment.apiBase}/images/${imageUrl}`;
   }
 
   addToCart(product: Product) {

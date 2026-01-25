@@ -1,6 +1,4 @@
 TODO later when deploying:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
 TODO soon:
-
-TODO maybe:
 - mail verification?

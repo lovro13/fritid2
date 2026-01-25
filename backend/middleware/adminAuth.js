@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const JWTService = require('../services/jwtService');
 const User = require('../models/User');
 const logger = require('../logger');
 
@@ -14,7 +14,7 @@ const adminAuth = async (req, res, next) => {
             return res.status(401).json({ error: 'Access denied. No token provided.' });
         }
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const decoded = JWTService.verifyToken(token);
         const user = await User.findById(decoded.id);
 
         if (!user) {

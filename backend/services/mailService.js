@@ -2,6 +2,7 @@ const nodemailer = require('nodemailer');
 const logger = require('../logger');
 const fs = require('fs');
 const path = require('path');
+const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
 
 /**
  * Escape HTML entities to prevent XSS attacks
@@ -89,7 +90,7 @@ class MailService {
                         ${(item.price * item.quantity).toFixed(2)} EUR
                     </td>
                 </tr>
-            `).join('') + `<tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Vmesni seštevek:</strong></td><td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} EUR</strong></td></tr><tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Dostava:</strong></td><td style="padding: 10px; text-align: right;"><strong>5.99 EUR</strong></td></tr>`;
+            `).join('') + `<tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Vmesni seštevek:</strong></td><td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} EUR</strong></td></tr><tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Dostava:</strong></td><td style="padding: 10px; text-align: right;"><strong>${SHIPPING_FEE.toFixed(2)} EUR</strong></td></tr>`;
 
             // Prepare template variables
             const title = upn ? '📄 Račun za naročilo' : 'Potrditev naročila';
@@ -148,7 +149,7 @@ class MailService {
                 .replace('{{city}}', escapeHtml(order.shippingCity))
                 .replace('{{orderItemsHtml}}', orderItemsHtml) // Already escaped
                 .replace('{{totalLabel}}', escapeHtml(upn ? 'Za plačilo:' : 'Skupaj:'))
-                .replace('{{totalAmount}}', (order.totalAmount + 5.99).toFixed(2))
+                .replace('{{totalAmount}}', order.totalAmount.toFixed(2))
                 .replace('{{additionalInstructionsHtml}}', additionalInstructionsHtml);
 
             // Plain text version (simplified for brevity, ideally also a template)
@@ -209,7 +210,7 @@ class MailService {
             const subtotalOwner = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const orderItemsText = order.orderItems.map(item =>
                 `${item.productName}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`
-            ).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: 5.99 EUR`;
+            ).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: ${SHIPPING_FEE.toFixed(2)} EUR`;
 
             // Replace variables in template with escaped user data
             let htmlContent = this.templates.ownerNotification

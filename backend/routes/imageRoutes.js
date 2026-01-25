@@ -6,8 +6,11 @@ const adminAuth = require('../middleware/adminAuth');
 const logger = require('../logger');
 const router = express.Router();
 
+const routesDir = path.resolve(__dirname, '..');
+const backendDir = path.basename(routesDir) === 'dist' ? path.resolve(routesDir, '..') : routesDir;
+const uploadsDir = path.resolve(backendDir, 'uploads/images/products');
+
 // Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../uploads/images/products');
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -16,8 +19,6 @@ if (!fs.existsSync(uploadsDir)) {
 const ALLOWED_TYPES = {
     'image/jpeg': ['.jpg', '.jpeg'],
     'image/png': ['.png'],
-    'image/gif': ['.gif'],
-    'image/webp': ['.webp']
 };
 
 // Magic keys for valid file types (first bytes)
@@ -25,8 +26,6 @@ const MAGIC_NUMBERS = {
     '.jpg': ['ffd8ff', 'ffd8'],
     '.jpeg': ['ffd8ff', 'ffd8'],
     '.png': ['89504e47'],
-    '.gif': ['47494638'],
-    '.webp': ['52494646'] // RIFF header, need to check further for WEBP
 };
 
 // Validate magic numbers from buffer

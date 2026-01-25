@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
@@ -58,18 +59,19 @@ const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.length === 0 && !isProduction) {
-      // Allow all origins in dev if FRONTEND_URL is not set
-      return callback(null, true);
+
+    if (allowedOrigins.length === 0) {
+      logger.error('CORS: FRONTEND_URL is not configured ');
+      return callback(new Error('CORS not configured'));
     }
 
     // Check if origin is allowed
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
-    } else {
-      logger.warn('CORS: Origin not allowed', { origin, allowedOrigins });
-      return callback(new Error('Not allowed by CORS'));
     }
+
+    logger.warn('CORS: Origin not allowed', { origin, allowedOrigins });
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true, // Allow cookies for CSRF protection
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -129,10 +131,14 @@ app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+const backendDir = path.basename(__dirname) === 'dist' ? path.resolve(__dirname, '..') : __dirname;
+const uploadsDir = path.resolve(backendDir, 'uploads/images/products');
+const legacyUploadsDir = path.resolve(backendDir, 'dist/uploads/images/products');
+
 
 
 // Serve static images with CORS headers
-app.use('/api/images', cors(corsOptions), express.static(path.join(__dirname, 'uploads/images/products')));
+app.use('/api/images', cors(corsOptions), express.static(uploadsDir), express.static(legacyUploadsDir));
 
 // Initialize database
 initializeDatabase();
