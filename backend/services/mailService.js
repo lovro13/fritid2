@@ -3,6 +3,10 @@ const logger = require('../logger');
 const fs = require('fs');
 const path = require('path');
 const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const servicesDir = path.resolve(__dirname, '..');
+const backendDir = path.basename(servicesDir) === 'dist' ? path.resolve(servicesDir, '..') : servicesDir;
+const templatesDir = path.resolve(backendDir, 'templates');
+const legacyTemplatesDir = path.resolve(backendDir, 'dist/templates');
 
 /**
  * Escape HTML entities to prevent XSS attacks
@@ -36,9 +40,10 @@ class MailService {
         });
 
         // Pre-load templates
+        const resolvedTemplatesDir = fs.existsSync(templatesDir) ? templatesDir : legacyTemplatesDir;
         this.templates = {
-            orderConfirmation: fs.readFileSync(path.join(__dirname, '../templates/orderConfirmation.html'), 'utf8'),
-            ownerNotification: fs.readFileSync(path.join(__dirname, '../templates/ownerNotification.html'), 'utf8')
+            orderConfirmation: fs.readFileSync(path.join(resolvedTemplatesDir, 'orderConfirmation.html'), 'utf8'),
+            ownerNotification: fs.readFileSync(path.join(resolvedTemplatesDir, 'ownerNotification.html'), 'utf8')
         };
     }
 
