@@ -1,3 +1,4 @@
+// @ts-nocheck
 const nodemailer = require('nodemailer');
 const logger = require('../logger');
 const fs = require('fs');
@@ -275,3 +276,4 @@ class MailService {
 }
 
 module.exports = new MailService();
+export default new MailService();

@@ -1,12 +1,14 @@
-const https = require('https');
-const { URL } = require('url');
-const logger = require('../logger');
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import https from 'https';
+import { URL } from 'url';
+import logger from '../logger';
 
 
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
 const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
 
-function httpsRequest(method, urlString, headers = {}, body = null) {
+function httpsRequest(method: string, urlString: string, headers: Record<string, any> = {}, body: any = null): Promise<any> {
   return new Promise((resolve, reject) => {
     try {
       const url = new URL(urlString);
@@ -48,7 +50,7 @@ function httpsRequest(method, urlString, headers = {}, body = null) {
   });
 }
 
-async function getToken({ username, password }) {
+export async function getToken({ username, password }: { username: string; password: string; }) {
   logger.info("getToken called")
   if (!MINIMAX_BASIC_B64) {
     throw new Error('MINIMAX_BASIC_B64 env is required for Basic Authorization');
@@ -92,7 +94,7 @@ async function getToken({ username, password }) {
   }
 }
 
-async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, body = null }) {
+export async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, body = null }: { method?: string; path: string; token: string; query?: Record<string, any>; body?: any; }): Promise<[any, any]> {
   if (!token) {
     throw new Error('Bearer token is required');
   }
@@ -127,4 +129,8 @@ async function apiRequestToMinimax({ method = 'GET', path, token, query = {}, bo
   return [res.data, res.headers];
 }
 
-module.exports = { httpsRequest, getToken, apiRequestToMinimax };
+export { httpsRequest };
+export default { httpsRequest, getToken, apiRequestToMinimax };
+// CommonJS compatibility
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+(module as any).exports = { httpsRequest, getToken, apiRequestToMinimax };

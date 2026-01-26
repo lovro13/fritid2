@@ -8,7 +8,7 @@ import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 
 import logger from './logger';
-import CSRFProtection from './middleware/csrf';
+import csrfProtection from './middleware/csrf';
 
 // Load environment variables
 const envPath = process.env.ENV_PATH;
@@ -26,7 +26,7 @@ if (process.env.JWT_SECRET.length < 32) {
 }
 
 // Import database initialization
-logger.info(process.env.NODE_ENV);
+logger.info(`Environment: ${process.env.NODE_ENV ?? 'unknown'}`);
 import { initializeDatabase } from './models/dbModel';
 
 // Import routes
@@ -57,7 +57,6 @@ if (isProduction) {
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.length === 0) {
@@ -65,15 +64,15 @@ const corsOptions = {
       return callback(new Error('CORS not configured'));
     }
 
-    // Check if origin is allowed
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
 
     logger.warn('CORS: Origin not allowed', { origin, allowedOrigins });
     return callback(new Error('Not allowed by CORS'));
   },
-  credentials: true, // Allow cookies for CSRF protection
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   exposedHeaders: ['X-CSRF-Token']
@@ -100,11 +99,7 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
-
-// CSRF Protection - Generate token for all requests
-app.use(CSRFProtection.generateTokenMiddleware);
-// CSRF Protection - Validate token for state-changing requests
-app.use('/api/', CSRFProtection.validateTokenMiddleware);
+app.use(csrfProtection);
 
 // --- Rate Limiting ---
 // Global rate limiter for all API routes

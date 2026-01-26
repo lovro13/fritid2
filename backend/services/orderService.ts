@@ -1,19 +1,20 @@
-const Order = require('../models/Order');
-const Product = require('../models/Product');
-const OrderItem = require('../models/OrderItem');
-const User = require('../models/User');
-const MailService = require('./mailService');
-const { apiRequestToMinimax, getCustomerId } = require('./minimaxService');
-const { getToken } = require('./httpRequestsService')
-const logger = require('../logger');
-const fs = require('fs');
-const path = require('path');
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import Order from '../models/Order';
+import Product from '../models/Product';
+import OrderItem from '../models/OrderItem';
+import User from '../models/User';
+import MailService from './mailService';
+import { apiRequestToMinimax, getCustomerId } from './minimaxService';
+import { getToken } from './httpRequestsService';
+import logger from '../logger';
+import fs from 'fs';
+import path from 'path';
 
 const idPostnina = 324;
 
-async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts }) {
+export async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts }: { order: any; user: any; cartItemsProducts: any[]; }) {
     const orgId = process.env.MINIMAX_ORG_ID;
-    const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
+    const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT || '0');
     let invoiceId = null;
 
     try {
@@ -38,12 +39,12 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             // Calculate dates for invoice
             const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + parseInt(process.env.MINIMAX_DUE_DAYS || 14));
+            dueDate.setDate(dueDate.getDate() + parseInt(process.env.MINIMAX_DUE_DAYS || '14', 10));
             const dueDateStr = dueDate.toISOString().split('T')[0];
 
             // PREPARE MINIMAX ITEMS
             const invoiceRows = cartItemsProducts.map((item, index) => {
-                const priceWithVat = parseFloat(item.price);
+                const priceWithVat = parseFloat(String(item.price));
                 const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
 
                 const totalValueWithVat = priceWithVat * item.quantity;
@@ -70,7 +71,7 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             if (idPostnina) {
                 const shippingProduct = await Product.findById(idPostnina);
                 if (shippingProduct) {
-                    const priceWithVat = parseFloat(shippingProduct.price);
+                    const priceWithVat = parseFloat(String(shippingProduct.price));
                     const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
                     const totalValueWithVat = priceWithVat * 1; // Quantity 1
 
@@ -99,7 +100,7 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
 
 
             // SEND API REQUEST TO CREATE INVOICE
-            const invoicePayload = {
+            const invoicePayload: any = {
                 Customer: { ID: customerId },
                 DateIssued: date,
                 DateTransaction: date,
@@ -180,7 +181,7 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
                 invoice: invoiceResponse,
                 invoiceId: invoiceId
             };
-        } catch (invErr) {
+        } catch (invErr: any) {
             logger.error('Failed to create Minimax invoice:', invErr);
             await order.updateStatus('Invoice Error');
             return {
@@ -198,6 +199,9 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
     }
 }
 
-module.exports = {
+export default {
     create_order_and_send_issue_to_mmax
 };
+// CommonJS compatibility
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+(module as any).exports = { create_order_and_send_issue_to_mmax };

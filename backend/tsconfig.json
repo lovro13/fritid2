@@ -5,14 +5,12 @@
     "moduleResolution": "Node",
     "rootDir": ".",
     "outDir": "dist",
-
+    "typeRoots": ["./types", "./node_modules/@types"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-
-    "strict": false,
-    "noImplicitAny": false,
-
+    "strict": true,
+    "noImplicitAny": true,
     "allowJs": true,
     "checkJs": false,
 

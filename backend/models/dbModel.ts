@@ -1,16 +1,13 @@
-const mysql = require('mysql2/promise');
-const logger = require('../logger');
-const dotenv = require('dotenv');
+import mysql, { Pool } from 'mysql2/promise';
+import dotenv from 'dotenv';
+import logger from '../logger';
 
+let pool: Pool | null = null;
 
-let pool;
-
-const envPath = "../" + process.env.ENV_PATH;
+const envPath = '../' + (process.env.ENV_PATH || '.env');
 dotenv.config({ path: envPath });
-logger.info(`Loading environment from: ${envPath}`);
 
-
-async function initializeDatabase() {
+export async function initializeDatabase(): Promise<void> {
   try {
     pool = mysql.createPool({
       host: process.env.DB_HOST,
@@ -24,24 +21,20 @@ async function initializeDatabase() {
       charset: 'utf8mb4'
     });
 
-    // Test the connection
     const connection = await pool.getConnection();
     logger.info('Successfully connected to MySQL database.');
     connection.release();
 
-    // Create tables
     await createTables();
-
     logger.info('DB init OK (MySQL)');
-
   } catch (error) {
     logger.error('Failed to initialize MySQL database:', error);
-    // Exit the process if the database connection fails, as the app cannot run without it.
     process.exit(1);
   }
 }
 
-async function createTables() {
+async function createTables(): Promise<void> {
+  if (!pool) throw new Error('DB not initialized');
   const connection = await pool.getConnection();
   try {
     await connection.query(`
@@ -107,6 +100,7 @@ async function createTables() {
         product_id INT,
         quantity INT NOT NULL,
         price DECIMAL(10, 2) NOT NULL,
+        color VARCHAR(100) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
         FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE SET NULL,
@@ -121,9 +115,13 @@ async function createTables() {
   }
 }
 
-function getPool() {
-  if (!pool) throw new Error('DB not initialized');
+export function getPool(): Pool {
+  if (!pool) {
+    throw new Error('DB not initialized');
+  }
   return pool;
 }
 
-module.exports = { initializeDatabase, getPool };
+// CommonJS compatibility for existing require() usage
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+(module as any).exports = { initializeDatabase, getPool };

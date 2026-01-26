@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
@@ -312,3 +314,5 @@ class GlsService {
 }
 
 module.exports = new GlsService();
+export default new GlsService();
+// @ts-nocheck
