@@ -31,7 +31,7 @@ export function authInterceptor(request: HttpRequest<unknown>,
 
   // Get CSRF token from cookie
   const getCsrfToken = (): string | null => {
-    const name = 'csrf-token=';
+    const name = 'csrfToken=';
     // gets cookie value
     const decodedCookie = decodeURIComponent(document.cookie);
     const ca = decodedCookie.split(';');

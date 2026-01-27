@@ -192,7 +192,7 @@ export class ProductManagementComponent implements OnInit {
   }
 
   private getCsrfToken(): string | null {
-    const name = 'csrf-token=';
+    const name = 'csrfToken=';
     const decodedCookie = decodeURIComponent(document.cookie || '');
     const parts = decodedCookie.split(';');
     for (let i = 0; i < parts.length; i++) {
