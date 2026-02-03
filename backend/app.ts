@@ -14,7 +14,6 @@ import csrfProtection from './middleware/csrf';
 const envPath = process.env.ENV_PATH;
 dotenv.config({ path: envPath });
 logger.info(`Loading environment from: ${envPath}`);
-
 // Validate required environment variables
 if (!process.env.JWT_SECRET) {
   logger.error('FATAL: JWT_SECRET environment variable is not set');
@@ -38,6 +37,7 @@ import adminRoutes from './routes/adminRoutes';
 import imageRoutes from './routes/imageRoutes';
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT;
 
 // --- Production Configuration ---
