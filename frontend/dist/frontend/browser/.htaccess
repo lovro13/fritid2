@@ -1,0 +1,17 @@
+# Angular SPA + /api passthrough
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Let Node/Passenger handle the API
+  RewriteRule ^api($|/) - [L]
+
+  # Serve existing files/directories as-is
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # SPA fallback to index.html
+  RewriteRule . index.html [L]
+</IfModule>
+
+DirectoryIndex index.html

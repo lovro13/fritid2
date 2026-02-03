@@ -92,3 +92,5 @@ backend/logs/
 backend/uploads/
 backend/cookies.txt
 **/*.sql
+backend/stderr.log
+backend/tmp/
