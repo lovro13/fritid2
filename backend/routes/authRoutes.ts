@@ -1,5 +1,4 @@
 import express, { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import logger from '../logger';
@@ -133,7 +132,7 @@ router.post('/verify', (req: Request, res: Response) => {
       return res.status(401).json({ valid: false, error: 'Žeton ni predložen' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { id: number; role: string };
+    const decoded = JWTService.verifyToken(token);
     res.json({ valid: true, userId: decoded.id, role: decoded.role });
   } catch (error) {
     logger.warn('Verify failed: Invalid token', { ip: req.ip });

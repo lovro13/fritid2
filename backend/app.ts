@@ -42,7 +42,10 @@ const PORT = process.env.PORT;
 
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
-const allowedOrigins = process.env.FRONTEND_URL || '';
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/$/, ''))
+  .filter(Boolean);
 
 // --- HTTPS Enforcement ---
 if (isProduction) {
