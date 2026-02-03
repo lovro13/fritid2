@@ -89,3 +89,8 @@ backend/minimax_api_controller.http
 /frontend/dist/
 
 backend/dist/
+backend/.env*
+backend/logs/
+backend/uploads/
+backend/cookies.txt
+**/*.sql
