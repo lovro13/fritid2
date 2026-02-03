@@ -66,6 +66,7 @@ async function createTables() {
         colors JSON NULL,
         category VARCHAR(100),
         stock_quantity INT NOT NULL DEFAULT 0,
+        minimax_id VARCHAR(255) NULL,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
