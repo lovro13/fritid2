@@ -86,9 +86,7 @@ backend/minimax_api_controller.http
 .env.prod
 **/.env
 
-/frontend/dist/
 
-backend/dist/
 backend/.env*
 backend/logs/
 backend/uploads/
