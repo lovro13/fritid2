@@ -28,14 +28,12 @@ export class ProductsService {
     const cartData = localStorage.getItem(this.CART_KEY);
     if (cartData) {
       try {
-        console.log("sem v CartService in loadCart")
         this.cartItemsSubject.next(JSON.parse(cartData));
       } catch (e) {
         console.error('Error parsing cart data', e);
         this.cartItemsSubject.next([]);
       }
     }
-    console.log("sem v CartService in loadCart2")
   }
 
   private saveCart() {
@@ -56,7 +54,6 @@ export class ProductsService {
     this.cartItemsSubject.next(currentItems);
     this.saveCart();
     this.notificationService.showSuccess(`Izdelek "${product.name}" je bil dodan v košarico!`);
-    console.log("Item added to cart:", product, quantity, selectedColor);
   }
 
   removeItemFromCart(item: CartItem) {

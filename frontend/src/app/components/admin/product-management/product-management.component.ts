@@ -49,7 +49,6 @@ export class ProductManagementComponent implements OnInit {
     // Subscribe temporarily to log the received products
     const subscription = this.products$.subscribe({
       next: (products) => {
-        console.log(`Loaded ${products.length} products`);
         subscription.unsubscribe();
       },
       error: (error) => {
@@ -60,7 +59,6 @@ export class ProductManagementComponent implements OnInit {
   }
 
   onEdit(product: Product): void {
-    console.log(`Editing product: ID=${product.id}, Name="${product.name}"`);
     this.isEditing = true;
     this.currentProductId = product.id;
 
@@ -93,7 +91,6 @@ export class ProductManagementComponent implements OnInit {
   }
 
   onDelete(id: number): void {
-    console.log(`Attempting to delete product with ID=${id}`);
     if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
       this.adminService.deleteProduct(id).subscribe({
         next: () => {
@@ -109,7 +106,6 @@ export class ProductManagementComponent implements OnInit {
         }
       });
     } else {
-      console.log(`User cancelled deletion of product ID=${id}`);
     }
   }
 
@@ -138,15 +134,12 @@ export class ProductManagementComponent implements OnInit {
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        console.log('Image preview created');
         this.selectedImagePreview = e.target?.result as string;
       };
       reader.readAsDataURL(file);
 
       // Set a temporary placeholder to satisfy form validation
       this.productForm.patchValue({ image_url: 'WILL_BE_UPLOADED' });
-    } else {
-      console.log('No file selected');
     }
   }
 
@@ -208,7 +201,6 @@ export class ProductManagementComponent implements OnInit {
   }
 
   async onSubmit(): Promise<void> {
-    console.log('Form submitted, validating...');
     if (this.productForm.invalid) {
       console.warn('Form validation failed:', this.productForm.errors);
       Object.keys(this.productForm.controls).forEach(key => {
@@ -236,7 +228,6 @@ export class ProductManagementComponent implements OnInit {
         .split(',')
         .map((color: string) => color.trim())
         .filter((color: string) => color.length > 0);
-      console.log('Processed colors:', productData.colors);
     } else {
       productData.colors = [];
     }
@@ -324,14 +315,10 @@ export class ProductManagementComponent implements OnInit {
 
   onImageLoad(event: Event): void {
     const target = event.target as HTMLImageElement;
-    if (target) {
-      console.log('Image loaded successfully:', target.src);
-    }
   }
 
   getImageUrl(imageUrl: string): string {
     if (!imageUrl) {
-      console.log('Empty image URL provided');
       return '';
     }
 

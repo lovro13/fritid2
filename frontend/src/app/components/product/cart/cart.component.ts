@@ -78,8 +78,4 @@ export class CartComponent {
     this.total = this.cartService.getTotal();
   }
 
-  checkout() {
-    console.log("Proceeding to checkout with items:", this.cartItems);
-  }
-
 }

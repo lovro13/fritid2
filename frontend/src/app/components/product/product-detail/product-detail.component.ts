@@ -29,7 +29,6 @@ export class ProductDetailComponent implements OnInit {
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id');
     if (id != null) {
-      console.log("Loading product with id:", id);
       this.loading = true;
       this.productService.getProductById(id).subscribe({
         next: (product) => {
@@ -37,9 +36,7 @@ export class ProductDetailComponent implements OnInit {
           if (product) {
             this.product = product;
             this.selectedColor = product.colors && product.colors.length > 0 ? product.colors[0] : '';
-            console.log("Product loaded:", product);
             this.image_url = this.getImageUrl(this.product?.image_url || '');
-            console.log(this.image_url);
           } else {
             this.error = "Product not found";
             console.error("Product not found");

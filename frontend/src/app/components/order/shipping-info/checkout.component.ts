@@ -90,7 +90,6 @@ export class CheckoutComponent {
           if (orders && orders.length > 0) {
             // Get the most recent order (assuming orders are sorted by date)
             const mostRecentOrder = orders[0];
-            console.log('Most recent order:', mostRecentOrder);
 
             // Auto-fill form with most recent order's shipping data
             const formData = {
@@ -103,7 +102,6 @@ export class CheckoutComponent {
               phone: mostRecentOrder.shippingPhoneNumber || ''
             };
 
-            console.log('Form data to patch:', formData);
             this.checkoutForm.patchValue(formData);
             this.dataSource = 'recent_order';
           } else {
@@ -195,8 +193,6 @@ export class CheckoutComponent {
     // Double check email if it was somehow skipped
     if (email && !this.invalidDomain) {
       this.orderService.setPersonInfo(this.checkoutForm.value as PersonInfo);
-      console.log('Form Submitted', this.checkoutForm.value);
-      console.log('With cart items:', this.cartItems);
       this.router.navigate(['/payment-method']);
     }
   }

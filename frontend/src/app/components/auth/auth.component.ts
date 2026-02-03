@@ -43,18 +43,14 @@ export class AuthComponent {
   constructor(
     private router: Router,
     private authService: UserService
-  ) {
-    console.log('🏗️ AuthComponent initialized');
-  }
+  ) {}
 
   toggleMode() {
-    console.log(`🔄 Switching auth mode from ${this.isLoginMode ? 'login' : 'register'} to ${this.isLoginMode ? 'register' : 'login'}`);
     this.isLoginMode = !this.isLoginMode;
     this.clearForms();
   }
 
   clearForms() {
-    console.log('🧹 Clearing forms and messages');
     this.loginData = { email: '', password: '' };
     this.registerData = {
       firstName: '',
@@ -73,7 +69,6 @@ export class AuthComponent {
   }
 
   clearMessages() {
-    console.log('🧹 Clearing all messages');
     this.loginSuccess = false;
     this.loginError = false;
     this.registrationSuccess = false;
@@ -82,31 +77,22 @@ export class AuthComponent {
   }
 
   onLogin() {
-    console.log('🔐 Login attempt started');
-    console.log('Login data:', { email: this.loginData.email, password: '***' });
-
     this.clearMessages();
 
     if (this.loginData.email && this.loginData.password) {
-      console.log('✅ Login form validation passed');
 
       this.authService.login(this.loginData.email, this.loginData.password)
         .subscribe({
           next: (res) => {
-            console.log('🔐 Login response received:', res);
-
             if (res.success) {
-              console.log('✅ Login successful');
               this.loginSuccess = true;
               this.messageText = 'Uspešno ste se prijavili! Preusmerjamo vas...';
 
               // Redirect after a short delay to show the success message
               setTimeout(() => {
-                console.log('🔄 Redirecting to home page');
                 this.router.navigate(['/']);
               }, 1500);
             } else {
-              console.log('❌ Login failed:', res.message);
               this.loginError = true;
               this.messageText = res.message || 'Napačen email ali geslo.';
             }
@@ -135,49 +121,28 @@ export class AuthComponent {
           }
         });
     } else {
-      console.log('❌ Login form validation failed - missing fields');
       this.loginError = true;
       this.messageText = 'Prosimo, izpolnite vsa polja.';
     }
   }
 
   onRegister() {
-    console.log('📝 Registration attempt started');
-    console.log('Registration data:', {
-      firstName: this.registerData.firstName,
-      lastName: this.registerData.lastName,
-      email: this.registerData.email,
-      phoneNumber: this.registerData.phoneNumber,
-      address: this.registerData.address,
-      postalCode: this.registerData.postalCode,
-      city: this.registerData.city,
-      password: '***',
-      confirmPassword: '***',
-      agreeToTerms: this.registerData.agreeToTerms
-    });
-
     this.clearMessages();
 
     if (this.validateRegistration()) {
-      console.log('✅ Registration form validation passed');
-
       this.authService.register(this.registerData).subscribe({
         next: (res) => {
-          console.log('📝 Registration response received:', res);
 
           if (res.user) {
-            console.log('✅ Registration successful');
             this.registrationSuccess = true;
             this.messageText = res.message || 'Uspešno ste se registrirali! Preusmerjamo vas na prijavo...';
 
             // Switch to login mode after a short delay
             setTimeout(() => {
-              console.log('🔄 Switching to login mode');
               this.isLoginMode = true;
               this.clearForms();
             }, 2000);
           } else {
-            console.log('❌ Registration failed:', res.message);
             this.registrationError = true;
             this.messageText = res.message || 'Napaka pri registraciji. Poskusite znova.';
           }
@@ -212,34 +177,26 @@ export class AuthComponent {
           }
         }
       });
-    } else {
-      console.log('❌ Registration form validation failed');
-    }
-  }
+    }  }
 
   validateRegistration(): boolean {
-    console.log('🔍 Validating registration form');
-
     if (!this.registerData.firstName || !this.registerData.lastName ||
       !this.registerData.email || !this.registerData.password ||
       !this.registerData.confirmPassword || !this.registerData.phoneNumber ||
       !this.registerData.address || !this.registerData.postalCode ||
       !this.registerData.city) {
-      console.log('❌ Validation failed: Missing required fields');
       this.registrationError = true;
       this.messageText = 'Prosimo, izpolnite vsa polja.';
       return false;
     }
 
     if (this.registerData.password !== this.registerData.confirmPassword) {
-      console.log('❌ Validation failed: Passwords do not match');
       this.registrationError = true;
       this.messageText = 'Gesli se ne ujemata.';
       return false;
     }
 
     if (this.registerData.password.length < 6) {
-      console.log('❌ Validation failed: Password too short');
       this.registrationError = true;
       this.messageText = 'Geslo mora imeti vsaj 6 znakov.';
       return false;
@@ -248,7 +205,6 @@ export class AuthComponent {
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(this.registerData.email)) {
-      console.log('❌ Validation failed: Invalid email format');
       this.registrationError = true;
       this.messageText = 'Prosimo, vnesite veljaven email naslov.';
       return false;
@@ -257,7 +213,6 @@ export class AuthComponent {
     // Slovenian phone number validation (9 digits starting with 0, spaces allowed)
     const cleaned = this.registerData.phoneNumber.replace(/\s/g, '');
     if (!/^0\d{8}$/.test(cleaned)) {
-      console.log('❌ Validation failed: Invalid phone number');
       this.registrationError = true;
       this.messageText = 'Telefonska številka mora imeti 9 številk in se začeti z 0 (npr. 051234567 ali 051 234 567).';
       return false;
@@ -266,7 +221,6 @@ export class AuthComponent {
     // Slovenian postal code validation (4 digits, 1000-9999)
     const postalCodeRegex = /^[1-9]\d{3}$/;
     if (!postalCodeRegex.test(this.registerData.postalCode)) {
-      console.log('❌ Validation failed: Invalid postal code');
       this.registrationError = true;
       this.messageText = 'Prosimo, vnesite veljavno slovensko poštno številko (4 številke, 1000-9999).';
       return false;
@@ -274,7 +228,6 @@ export class AuthComponent {
 
     // Address validation (minimum 5 characters)
     if (this.registerData.address.length < 5) {
-      console.log('❌ Validation failed: Address too short');
       this.registrationError = true;
       this.messageText = 'Naslov mora imeti vsaj 5 znakov.';
       return false;
@@ -282,32 +235,25 @@ export class AuthComponent {
 
     // City validation (minimum 2 characters)
     if (this.registerData.city.length < 2) {
-      console.log('❌ Validation failed: City name too short');
       this.registrationError = true;
       this.messageText = 'Ime kraja mora imeti vsaj 2 znaka.';
       return false;
     }
 
     if (!this.registerData.agreeToTerms) {
-      console.log('❌ Validation failed: Terms not agreed');
       this.registrationError = true;
       this.messageText = 'Morate se strinjati s pogoji uporabe.';
       return false;
     }
 
-    console.log('✅ Registration form validation passed');
     return true;
   }
 
   forgotPassword() {
-    console.log('🔑 Forgot password requested');
     const email = prompt('Vnesite vaš email naslov:');
     if (email) {
-      console.log('📧 Password reset requested for email:', email);
       // TODO: Implement forgot password logic
       alert('Navodila za ponastavitev gesla so bila poslana na vaš email.');
-    } else {
-      console.log('❌ Password reset cancelled - no email provided');
     }
   }
 }

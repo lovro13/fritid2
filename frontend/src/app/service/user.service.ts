@@ -63,27 +63,21 @@ export class UserService {
 
   private initializeSynchronously(): void {
     const storedUser = this.getUser();
-    console.log('ANTIGRAVITY: Initializing UserService. Stored user:', storedUser);
 
     // We optimistically set the user if data exists in localStorage
     if (storedUser) {
-      console.log('ANTIGRAVITY: Restoring user session from localStorage');
       this.userSubject.next(storedUser);
       // Verify session via cookie
       this.validateTokenSilently();
-    } else {
-      console.log('ANTIGRAVITY: No stored user found.');
-    }
+    } 
 
     // Mark as initialized immediately
     this.isInitialized.next(true);
   }
 
   private validateTokenSilently(): void {
-    console.log('ANTIGRAVITY: Validating token silently...');
     this.validateToken().subscribe({
       next: (isValid: boolean) => {
-        console.log('ANTIGRAVITY: Token validation result:', isValid);
         if (!isValid) {
           console.warn('ANTIGRAVITY: Token validation failed, logging out user');
           this.logout(false);
@@ -98,7 +92,6 @@ export class UserService {
 
   private handleStorageChange(): void {
     const storedUser = this.getUser();
-    console.log('ANTIGRAVITY: Storage changed. New user:', storedUser);
 
     // If user was removed, clear the service state
     if (!storedUser) {
@@ -137,7 +130,6 @@ export class UserService {
     ).pipe(
       tap(res => {
         if (res.success && res.user) {
-          console.log('ANTIGRAVITY: Login successful, saving user to localStorage');
           const user: User = {
             id: res.user.id,
             email: res.user.email,
@@ -167,7 +159,6 @@ export class UserService {
       postalCode: userData.postalCode,
       city: userData.city
     };
-    console.log('Registration request:', registrationRequest);
 
     return this.http.post(`${environment.apiBase}/auth/register`, registrationRequest);
   }
