@@ -1,13 +1,13 @@
 // @ts-nocheck
-const nodemailer = require('nodemailer');
-const logger = require('../logger');
-const fs = require('fs');
-const path = require('path');
+import nodemailer from 'nodemailer';
+import logger from '../logger';
+import fs from 'fs';
+import path from 'path';
 const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
-const servicesDir = path.resolve(__dirname, '..');
-const backendDir = path.basename(servicesDir) === 'dist' ? path.resolve(servicesDir, '..') : servicesDir;
+// Resolve backend directory - handles both dev (running from src) and production (running from dist)
+const isRunningFromDist = __dirname.includes(path.sep + 'dist' + path.sep) || __dirname.includes('/dist/');
+const backendDir = isRunningFromDist ? path.resolve(__dirname, '..', '..') : path.resolve(__dirname, '..');
 const templatesDir = path.resolve(backendDir, 'templates');
-const legacyTemplatesDir = path.resolve(backendDir, 'dist/templates');
 
 /**
  * Escape HTML entities to prevent XSS attacks
@@ -72,7 +72,8 @@ class MailService {
             // Check if invoice exists for UPN payment
             let invoicePath = null;
             if (upn) {
-                invoicePath = path.join(__dirname, '..', 'uploads', 'invoices', `invoice_${order.id}_${invoiceId}.pdf`);
+                const invoicesDir = path.resolve(backendDir, 'uploads', 'invoices');
+                invoicePath = path.resolve(invoicesDir, `invoice_${order.id}_${invoiceId}.pdf`);
                 if (!fs.existsSync(invoicePath)) {
                     logger.error(`Invoice file not found: ${invoicePath}`);
                     throw new Error(`Invoice file not found: invoice_${order.id}_${invoiceId}.pdf`);
@@ -159,13 +160,13 @@ class MailService {
                 .replace('{{additionalInstructionsHtml}}', additionalInstructionsHtml);
 
             // Plain text version (simplified for brevity, ideally also a template)
-            const textContent = `Naročilo #${order.id} - ${upn ? 'Za plačilo' : 'Potrditev'}`;
+            const textContent = `Naročilo - ${upn ? 'Za plačilo' : 'Potrditev'}`;
 
             const recipientEmail = order.shippingEmail;
             const mailOptions = {
                 from: `"Fritid" <${process.env.MAIL_USER}>`,
                 to: recipientEmail,
-                subject: upn ? `Račun za naročilo #${order.id}` : `Potrditev naročila - Naročilo #${order.id}`,
+                subject: upn ? `Račun za naročilo pri Fritid d.o.o.` : `Potrditev naročila`,
                 text: textContent,
                 html: htmlContent,
                 attachments: upn ? [{

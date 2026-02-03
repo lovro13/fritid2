@@ -164,7 +164,14 @@ export async function create_order_and_send_issue_to_mmax({ order, user, cartIte
                 // SAVE PDF
                 let savedFilePath = null;
                 const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
-                const uploadsDir = path.join(__dirname, '../uploads/invoices');
+                // Resolve to backend root directory
+                const isRunningFromDist = __dirname.includes('/dist/') || __dirname.includes(path.sep + 'dist' + path.sep);
+                const backendDir = isRunningFromDist ? path.resolve(__dirname, '..', '..') : path.resolve(__dirname, '..');
+                const uploadsDir = path.resolve(backendDir, 'uploads', 'invoices');
+                // Ensure directory exists
+                if (!fs.existsSync(uploadsDir)) {
+                  fs.mkdirSync(uploadsDir, { recursive: true });
+                }
                 savedFilePath = path.join(uploadsDir, fileName);
                 const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
                 fs.writeFileSync(savedFilePath, pdfBuffer);

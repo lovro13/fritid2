@@ -252,7 +252,10 @@ class GlsService {
      * @returns {string} Full path to saved file
      */
     async saveLabelToFile(pdfBuffer, filename = 'gls-label.pdf') {
-        const outputPath = path.join(__dirname, '..', 'uploads', 'gls-labels', filename);
+        // Resolve to backend root directory
+        const isRunningFromDist = __dirname.includes('/dist/') || __dirname.includes(path.sep + 'dist' + path.sep);
+        const backendDir = isRunningFromDist ? path.resolve(__dirname, '..', '..') : path.resolve(__dirname, '..');
+        const outputPath = path.resolve(backendDir, 'uploads', 'gls-labels', filename);
 
         // Ensure directory exists
         const dir = path.dirname(outputPath);
