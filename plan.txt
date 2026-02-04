@@ -2,5 +2,4 @@ TODO later when deploying:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
 TODO soon:
 - mail verification?
-- delete number from mail confirmation
-- invocies and stickers saving to dist or should they
+- more admin access to the whole database and manage the whole database
