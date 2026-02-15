@@ -1,0 +1,12 @@
+# Safety: no directory listing if someone hits this path directly
+Options -Indexes
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION BEGIN
+PassengerAppRoot "/home/fritidsi/staminox.com/fritid-lovro2/backend"
+PassengerBaseURI "/api"
+PassengerNodejs "/home/fritidsi/nodevenv/staminox.com/fritid-lovro2/backend/24/bin/node"
+PassengerAppType node
+PassengerStartupFile dist/app.js
+# DO NOT REMOVE. CLOUDLINUX PASSENGER CONFIGURATION END
+# DO NOT REMOVE OR MODIFY. CLOUDLINUX ENV VARS CONFIGURATION BEGIN
+<IfModule Litespeed>
+</IfModule>
