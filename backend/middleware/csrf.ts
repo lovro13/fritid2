@@ -14,17 +14,17 @@ const isProduction = process.env.NODE_ENV === 'production';
  */
 function csrfProtection(req: Request, res: Response, next: NextFunction): void {
   if (SAFE_METHODS.has(req.method)) {
-    // Temporarily always refresh to fix old cookies without proper domain
-    // TODO: After a week, change back to: if (!req.cookies?.csrfToken)
-    const token = generateCsrfToken();
-    res.cookie('csrfToken', token, {
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      domain: isProduction ? '.fritid.si' : undefined,
-      maxAge: 24 * 60 * 60 * 1000
-    });
-    res.setHeader('X-CSRF-Token', token);
+    if (!req.cookies?.csrfToken) {
+      const token = generateCsrfToken();
+      res.cookie('csrfToken', token, {
+        httpOnly: false,
+        secure: isProduction,
+        sameSite: 'lax',
+        domain: isProduction ? '.fritid.si' : undefined,
+        maxAge: 24 * 60 * 60 * 1000
+      });
+      res.setHeader('X-CSRF-Token', token);
+    }
     next();
     return;
   }
