@@ -37,7 +37,7 @@ import adminRoutes from './routes/adminRoutes';
 import imageRoutes from './routes/imageRoutes';
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 const PORT = process.env.PORT;
 
 // --- Production Configuration ---

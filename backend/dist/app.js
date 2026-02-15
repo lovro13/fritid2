@@ -35,7 +35,7 @@ const authRoutes_1 = __importDefault(require("./routes/authRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const imageRoutes_1 = __importDefault(require("./routes/imageRoutes"));
 const app = (0, express_1.default)();
-app.set('trust proxy', true);
+app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 const PORT = process.env.PORT;
 // --- Production Configuration ---
 const isProduction = process.env.NODE_ENV === 'production';
