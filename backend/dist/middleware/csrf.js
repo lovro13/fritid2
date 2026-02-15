@@ -21,7 +21,8 @@ function csrfProtection(req, res, next) {
             res.cookie('csrfToken', token, {
                 httpOnly: false,
                 secure: isProduction,
-                sameSite: 'lax',
+                sameSite: isProduction ? 'none' : 'lax',
+                domain: isProduction ? '.fritid.si' : undefined,
                 maxAge: 24 * 60 * 60 * 1000
             });
             res.setHeader('X-CSRF-Token', token);
