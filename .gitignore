@@ -6,6 +6,7 @@ node_modules
 /tmp
 /out-tsc
 /bazel-out
+frontend/dist/
 
 backend/uploads/invoices/
 backend/uploads/gls-labels/
