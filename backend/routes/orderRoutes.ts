@@ -83,7 +83,7 @@ router.post(
     body('personInfo.phone').matches(/^[\d\s\-+()]+$/).withMessage('Valid phone number is required'),
     body('cartItems').isArray({ min: 1 }).withMessage('Cart must contain at least one item'),
     body('cartItems.*.product.id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
-    body('cartItems.*.quantity').isInt({ min: 1, max: 100 }).withMessage('Quantity must be between 1 and 100'),
+    body('cartItems.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
     body('typeOfOrder').isIn(['upn', 'cash', 'delivery']).withMessage('Invalid order type')
   ],
   async (req: Request, res: Response) => {

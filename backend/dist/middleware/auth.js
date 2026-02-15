@@ -5,9 +5,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateToken = void 0;
 const jwtService_1 = __importDefault(require("../services/jwtService"));
+const authCookiesService_1 = require("../services/authCookiesService");
 const authenticateToken = (req, res, next) => {
     const token = req.cookies?.token;
     if (!token) {
+        (0, authCookiesService_1.clearAuthCookies)(res);
         res.status(401).json({ error: 'Access token required' });
         return;
     }
@@ -17,6 +19,7 @@ const authenticateToken = (req, res, next) => {
         next();
     }
     catch (_error) {
+        (0, authCookiesService_1.clearAuthCookies)(res);
         res.status(403).json({ error: 'Invalid or expired token' });
     }
 };

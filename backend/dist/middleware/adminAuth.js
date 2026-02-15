@@ -7,11 +7,13 @@ exports.adminAuth = void 0;
 const jwtService_1 = __importDefault(require("../services/jwtService"));
 const User_1 = __importDefault(require("../models/User"));
 const logger_1 = __importDefault(require("../logger"));
+const authCookiesService_1 = require("../services/authCookiesService");
 const adminAuth = async (req, res, next) => {
     try {
         const token = req.cookies?.token;
         if (!token) {
             logger_1.default.warn('adminAuth: No token provided in cookies');
+            (0, authCookiesService_1.clearAuthCookies)(res);
             res.status(401).json({ error: 'Access denied. No token provided.' });
             return;
         }
@@ -19,6 +21,7 @@ const adminAuth = async (req, res, next) => {
         const user = await User_1.default.findById(decoded.id);
         if (!user) {
             logger_1.default.warn(`adminAuth: User not found for ID ${decoded.id}`);
+            (0, authCookiesService_1.clearAuthCookies)(res);
             res.status(401).json({ error: 'Invalid token.' });
             return;
         }
@@ -32,6 +35,7 @@ const adminAuth = async (req, res, next) => {
     }
     catch (error) {
         logger_1.default.error('adminAuth: Token verification failed:', error?.message || error);
+        (0, authCookiesService_1.clearAuthCookies)(res);
         res.status(401).json({ error: 'Invalid token.' });
     }
 };

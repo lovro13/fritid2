@@ -11,7 +11,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const authCookieOptions = {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
 };
 const generateCsrfToken = () => crypto_1.default.randomBytes(32).toString('hex');
@@ -22,7 +22,7 @@ function setAuthCookies(res, jwtToken) {
     res.cookie('csrfToken', csrfToken, {
         httpOnly: false, // readable by frontend to echo in header
         secure: isProduction,
-        sameSite: 'lax',
+        sameSite: isProduction ? 'none' : 'lax',
         maxAge: authCookieOptions.maxAge
     });
     return csrfToken;
@@ -31,11 +31,11 @@ function clearAuthCookies(res) {
     res.clearCookie('token', {
         httpOnly: true,
         secure: isProduction,
-        sameSite: 'lax'
+        sameSite: isProduction ? 'none' : 'lax'
     });
     res.clearCookie('csrfToken', {
         httpOnly: false,
         secure: isProduction,
-        sameSite: 'lax'
+        sameSite: isProduction ? 'none' : 'lax'
     });
 }

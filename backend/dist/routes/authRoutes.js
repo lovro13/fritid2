@@ -114,6 +114,7 @@ router.post('/verify', (req, res) => {
         const token = req.cookies.token;
         if (!token) {
             logger_1.default.warn('Verify failed: No token provided', { ip: req.ip });
+            (0, authCookiesService_1.clearAuthCookies)(res);
             return res.status(401).json({ valid: false, error: 'Žeton ni predložen' });
         }
         const decoded = jwtService_1.default.verifyToken(token);
@@ -121,6 +122,7 @@ router.post('/verify', (req, res) => {
     }
     catch (error) {
         logger_1.default.warn('Verify failed: Invalid token', { ip: req.ip });
+        (0, authCookiesService_1.clearAuthCookies)(res);
         res.status(401).json({ valid: false, error: 'Neveljaven žeton' });
     }
 });
@@ -129,11 +131,13 @@ router.post('/refresh', async (req, res) => {
     try {
         const token = req.cookies.token;
         if (!token) {
+            (0, authCookiesService_1.clearAuthCookies)(res);
             return res.status(401).json({ error: 'No token provided' });
         }
         const decoded = jwtService_1.default.verifyToken(token);
         const user = await User_1.default.findById(decoded.id);
         if (!user) {
+            (0, authCookiesService_1.clearAuthCookies)(res);
             return res.status(401).json({ error: 'User not found' });
         }
         const newToken = jwtService_1.default.generateToken({ id: user.id, email: user.email, role: user.role });
@@ -142,6 +146,7 @@ router.post('/refresh', async (req, res) => {
     }
     catch (error) {
         logger_1.default.warn('Token refresh failed:', error?.message);
+        (0, authCookiesService_1.clearAuthCookies)(res);
         res.status(401).json({ error: 'Invalid or expired token' });
     }
 });

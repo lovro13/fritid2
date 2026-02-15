@@ -78,7 +78,7 @@ router.post('/', [
     (0, express_validator_1.body)('personInfo.phone').matches(/^[\d\s\-+()]+$/).withMessage('Valid phone number is required'),
     (0, express_validator_1.body)('cartItems').isArray({ min: 1 }).withMessage('Cart must contain at least one item'),
     (0, express_validator_1.body)('cartItems.*.product.id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
-    (0, express_validator_1.body)('cartItems.*.quantity').isInt({ min: 1, max: 100 }).withMessage('Quantity must be between 1 and 100'),
+    (0, express_validator_1.body)('cartItems.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
     (0, express_validator_1.body)('typeOfOrder').isIn(['upn', 'cash', 'delivery']).withMessage('Invalid order type')
 ], async (req, res) => {
     const errors = (0, express_validator_1.validationResult)(req);

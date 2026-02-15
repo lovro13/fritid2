@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import JWTService from '../services/jwtService';
 import User from '../models/User';
 import logger from '../logger';
+import { clearAuthCookies } from '../services/authCookiesService';
 
 const adminAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -9,6 +10,7 @@ const adminAuth = async (req: Request, res: Response, next: NextFunction): Promi
 
     if (!token) {
       logger.warn('adminAuth: No token provided in cookies');
+      clearAuthCookies(res);
       res.status(401).json({ error: 'Access denied. No token provided.' });
       return;
     }
@@ -18,6 +20,7 @@ const adminAuth = async (req: Request, res: Response, next: NextFunction): Promi
 
     if (!user) {
       logger.warn(`adminAuth: User not found for ID ${decoded.id}`);
+      clearAuthCookies(res);
       res.status(401).json({ error: 'Invalid token.' });
       return;
     }
@@ -32,6 +35,7 @@ const adminAuth = async (req: Request, res: Response, next: NextFunction): Promi
     next();
   } catch (error: any) {
     logger.error('adminAuth: Token verification failed:', error?.message || error);
+    clearAuthCookies(res);
     res.status(401).json({ error: 'Invalid token.' });
   }
 };

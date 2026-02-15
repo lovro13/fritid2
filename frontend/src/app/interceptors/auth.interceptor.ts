@@ -65,8 +65,8 @@ export function authInterceptor(request: HttpRequest<unknown>,
   // Handle the request and catch any authentication errors
   return next(modifiedRequest).pipe(
     catchError((error: HttpErrorResponse) => {
-      // If we get a 401 Unauthorized error, clear tokens and redirect
-      if (error.status === 401) {
+      // If we get a 401/403 auth error, clear tokens and redirect
+      if (error.status === 401 || error.status === 403) {
         const authService = injector.get(UserService);
         authService.clearAll();
         router.navigate(['/auth']);

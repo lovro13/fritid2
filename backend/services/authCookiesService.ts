@@ -6,7 +6,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 const authCookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: 'lax' as const,
+  sameSite: isProduction ? 'none' as const : 'lax' as const,
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 };
 
@@ -19,7 +19,7 @@ export function setAuthCookies(res: Response, jwtToken: string): string {
   res.cookie('csrfToken', csrfToken, {
     httpOnly: false, // readable by frontend to echo in header
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     maxAge: authCookieOptions.maxAge
   });
 
@@ -30,11 +30,11 @@ export function clearAuthCookies(res: Response): void {
   res.clearCookie('token', {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax'
+    sameSite: isProduction ? 'none' : 'lax'
   });
   res.clearCookie('csrfToken', {
     httpOnly: false,
     secure: isProduction,
-    sameSite: 'lax'
+    sameSite: isProduction ? 'none' : 'lax'
   });
 }

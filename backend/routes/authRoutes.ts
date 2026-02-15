@@ -129,6 +129,7 @@ router.post('/verify', (req: Request, res: Response) => {
 
     if (!token) {
       logger.warn('Verify failed: No token provided', { ip: req.ip });
+      clearAuthCookies(res);
       return res.status(401).json({ valid: false, error: 'Žeton ni predložen' });
     }
 
@@ -136,6 +137,7 @@ router.post('/verify', (req: Request, res: Response) => {
     res.json({ valid: true, userId: decoded.id, role: decoded.role });
   } catch (error) {
     logger.warn('Verify failed: Invalid token', { ip: req.ip });
+    clearAuthCookies(res);
     res.status(401).json({ valid: false, error: 'Neveljaven žeton' });
   }
 });
@@ -145,6 +147,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
   try {
     const token = req.cookies.token as string | undefined;
     if (!token) {
+      clearAuthCookies(res);
       return res.status(401).json({ error: 'No token provided' });
     }
 
@@ -152,6 +155,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const user = await User.findById(decoded.id);
 
     if (!user) {
+      clearAuthCookies(res);
       return res.status(401).json({ error: 'User not found' });
     }
 
@@ -161,6 +165,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     res.json({ success: true, message: 'Token refreshed' });
   } catch (error: any) {
     logger.warn('Token refresh failed:', error?.message);
+    clearAuthCookies(res);
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 });
