@@ -47,7 +47,7 @@ router.post('/products', adminAuth, [
   }
 
   try {
-    const { name, description, price, image_url, colors, category, stock_quantity } = req.body;
+    const { name, description, price, image_url, colors, category, stock_quantity, display_order } = req.body;
     const productData = {
       name,
       description: description || '',
@@ -55,7 +55,8 @@ router.post('/products', adminAuth, [
       image_url,
       colors: Array.isArray(colors) ? JSON.stringify(colors) : colors || '[]',
       category: category || '',
-      stock_quantity: parseInt(stock_quantity, 10) || 0
+      stock_quantity: parseInt(stock_quantity, 10) || 0,
+      display_order: display_order !== undefined ? parseInt(display_order, 10) : 0
     };
 
     const product = await Product.create(productData);
@@ -88,7 +89,7 @@ router.put('/products/:id', adminAuth, [
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const { name, description, price, image_url, colors, category, stock_quantity, is_active } = req.body;
+    const { name, description, price, image_url, colors, category, stock_quantity, is_active, display_order } = req.body;
 
     const productData = {
       name: name ?? product.name,
@@ -98,7 +99,8 @@ router.put('/products/:id', adminAuth, [
       colors: colors !== undefined ? (Array.isArray(colors) ? JSON.stringify(colors) : colors) : product.colors,
       category: category ?? product.category,
       stock_quantity: stock_quantity !== undefined ? parseInt(stock_quantity, 10) : product.stock_quantity,
-      is_active: is_active !== undefined ? Boolean(is_active) : product.is_active
+      is_active: is_active !== undefined ? Boolean(is_active) : product.is_active,
+      display_order: display_order !== undefined ? parseInt(display_order, 10) : product.display_order
     };
 
     const updatedProduct = await Product.update(Number(req.params.id), productData);

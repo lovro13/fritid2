@@ -49,7 +49,7 @@ router.post('/products', adminAuth_1.default, [
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-        const { name, description, price, image_url, colors, category, stock_quantity } = req.body;
+        const { name, description, price, image_url, colors, category, stock_quantity, display_order } = req.body;
         const productData = {
             name,
             description: description || '',
@@ -57,7 +57,8 @@ router.post('/products', adminAuth_1.default, [
             image_url,
             colors: Array.isArray(colors) ? JSON.stringify(colors) : colors || '[]',
             category: category || '',
-            stock_quantity: parseInt(stock_quantity, 10) || 0
+            stock_quantity: parseInt(stock_quantity, 10) || 0,
+            display_order: display_order !== undefined ? parseInt(display_order, 10) : 0
         };
         const product = await Product_1.default.create(productData);
         logger_1.default.info(`Admin created new product: ${name} (ID: ${product?.id})`);
@@ -87,7 +88,7 @@ router.put('/products/:id', adminAuth_1.default, [
             logger_1.default.warn(`Attempted to update non-existent product ${req.params.id}`);
             return res.status(404).json({ error: 'Product not found' });
         }
-        const { name, description, price, image_url, colors, category, stock_quantity, is_active } = req.body;
+        const { name, description, price, image_url, colors, category, stock_quantity, is_active, display_order } = req.body;
         const productData = {
             name: name ?? product.name,
             description: description ?? product.description,
@@ -96,7 +97,8 @@ router.put('/products/:id', adminAuth_1.default, [
             colors: colors !== undefined ? (Array.isArray(colors) ? JSON.stringify(colors) : colors) : product.colors,
             category: category ?? product.category,
             stock_quantity: stock_quantity !== undefined ? parseInt(stock_quantity, 10) : product.stock_quantity,
-            is_active: is_active !== undefined ? Boolean(is_active) : product.is_active
+            is_active: is_active !== undefined ? Boolean(is_active) : product.is_active,
+            display_order: display_order !== undefined ? parseInt(display_order, 10) : product.display_order
         };
         const updatedProduct = await Product_1.default.update(Number(req.params.id), productData);
         logger_1.default.info(`Admin updated product ${req.params.id}`);

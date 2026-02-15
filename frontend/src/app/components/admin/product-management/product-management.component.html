@@ -67,6 +67,12 @@
       </div>
     </div>
 
+    <div class="form-group" id="display-order-group">
+      <label for="display_order">Vrstni red prikaza</label>
+      <input id="display_order" type="number" formControlName="display_order" placeholder="0">
+      <small class="form-text">Nižje številke se prikažejo najprej (0, 1, 2, 3...)</small>
+    </div>
+
     <div class="form-group" id="colors-group">
       <label for="colors">Razpoložljive barve</label>
       <input id="colors" formControlName="colors" placeholder="Črna, Modra, Rdeča, Bela">
@@ -97,6 +103,7 @@
           <tr>
             <th>Slika</th>
             <th>ID</th>
+            <th>Vrstni red</th>
             <th>Ime izdelka</th>
             <th>Kategorija</th>
             <th>Cena</th>
@@ -118,6 +125,7 @@
               </div>
             </td>
             <td data-label="ID">{{ product.id }}</td>
+            <td data-label="Vrstni red">{{ product.display_order || 0 }}</td>
             <td data-label="Ime izdelka">
               <div class="product-info">
                 <span class="name">{{ product.name }}</span>

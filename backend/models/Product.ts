@@ -13,6 +13,7 @@ export interface ProductRow extends RowDataPacket {
   stock_quantity: number;
   is_active: number | boolean;
   minimax_id?: string | null;
+  display_order?: number;
   created_at: Date;
 }
 
@@ -26,6 +27,7 @@ export interface ProductInput {
   stock_quantity?: number;
   is_active?: number | boolean;
   minimax_id?: string | null;
+  display_order?: number;
 }
 
 class Product {
@@ -39,6 +41,7 @@ class Product {
   category: string | null;
   stock_quantity: number;
   is_active: boolean;
+  display_order: number;
   created_at: Date;
 
   constructor(productData: ProductRow) {
@@ -52,6 +55,7 @@ class Product {
     this.category = productData.category ?? null;
     this.stock_quantity = productData.stock_quantity;
     this.is_active = Boolean(productData.is_active);
+    this.display_order = productData.display_order ?? 0;
     this.created_at = productData.created_at;
   }
 
@@ -71,14 +75,14 @@ class Product {
 
   static async findAllActive(): Promise<ProductRow[]> {
     const [rows] = await getPool().execute<ProductRow[]>(
-      'SELECT * FROM products WHERE is_active = 1 ORDER BY id DESC'
+      'SELECT * FROM products WHERE is_active = 1 ORDER BY display_order ASC, id DESC'
     );
     return rows;
   }
 
   static async findAll(): Promise<ProductRow[]> {
     const [rows] = await getPool().execute<ProductRow[]>(
-      'SELECT * FROM products ORDER BY id DESC'
+      'SELECT * FROM products ORDER BY display_order ASC, id DESC'
     );
     return rows;
   }
@@ -93,7 +97,7 @@ class Product {
   static async search(q: string): Promise<ProductRow[]> {
     const like = `%${q}%`;
     const [rows] = await getPool().execute<ProductRow[]>(
-      'SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ?) ORDER BY id DESC',
+      'SELECT * FROM products WHERE is_active = 1 AND (name LIKE ? OR description LIKE ?) ORDER BY display_order ASC, id DESC',
       [like, like]
     );
     return rows;
@@ -134,7 +138,7 @@ class Product {
   }
 
   static async update(id: number, data: ProductInput): Promise<Product | null> {
-    const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
+    const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id, display_order } = data;
     await getPool().execute<ResultSetHeader>(
       `UPDATE products SET 
              name = ?,
@@ -145,7 +149,8 @@ class Product {
              category = ?,
              stock_quantity = ?,
              is_active = ?,
-             minimax_id = ?
+             minimax_id = ?,
+             display_order = ?
              WHERE id = ?`,
       [
         name,
@@ -157,6 +162,7 @@ class Product {
         stock_quantity ?? 0,
         is_active ?? 1,
         minimax_id ?? null,
+        display_order ?? 0,
         id
       ]
     );

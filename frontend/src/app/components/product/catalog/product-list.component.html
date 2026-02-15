@@ -1,4 +1,4 @@
-<!-- Hero Section with Welcome and Sponsors -->
+<!-- Hero Section with Welcome -->
 <div class="hero-section">
     <!-- Welcome Section -->
     <div class="welcome-section">
@@ -8,19 +8,6 @@
                 Odkrijte našo bogato ponudbo kakovostnih steklenic, pokrovčkov in dodatkov za shranjevanje vaših najljubših izdelkov. 
                 Vse naše izdelke skrbno izbiramo z mislijo na kakovost, funkcionalnost in estetiko.
             </p>
-        </div>
-    </div>
-
-    <!-- Sponsors Section -->
-    <div class="sponsors-section">
-        <h2>Naši partnerji</h2>
-        <div class="sponsors-container">
-            <div class="sponsor-item">
-                <img src="assets/bene-mali.png" alt="Bene Partner" class="sponsor-logo">
-            </div>
-            <div class="sponsor-item">
-                <img src="assets/kgt_logo.png" alt="KGT Partner" class="sponsor-logo">
-            </div>
         </div>
     </div>
 </div>
@@ -77,7 +64,11 @@
             </div>
 
             <div class="card-content">
-                <h3>{{ product.name }}</h3>
+                <h3>
+                    <a [routerLink]="['/product', product.id]" class="product-name-link">
+                        {{ product.name }}
+                    </a>
+                </h3>
                 <p class="price">{{ product.price | number:'1.2-2' }}</p>
             </div>
 

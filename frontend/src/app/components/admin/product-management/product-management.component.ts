@@ -36,7 +36,8 @@ export class ProductManagementComponent implements OnInit {
       colors: [''],
       category: [''],
       stock_quantity: [0, Validators.min(0)],
-      is_active: [true]
+      is_active: [true],
+      display_order: [0, [Validators.min(0)]]
     });
   }
 
@@ -80,7 +81,8 @@ export class ProductManagementComponent implements OnInit {
       colors: colorsString,
       category: product.category || '',
       stock_quantity: product.stock_quantity || 0,
-      is_active: product.is_active !== undefined ? product.is_active : true
+      is_active: product.is_active !== undefined ? product.is_active : true,
+      display_order: product.display_order || 0
     });
 
     // Scroll to the form for better UX
@@ -281,7 +283,8 @@ export class ProductManagementComponent implements OnInit {
       colors: '',
       category: '',
       stock_quantity: 0,
-      is_active: true
+      is_active: true,
+      display_order: 0
     });
   }
 

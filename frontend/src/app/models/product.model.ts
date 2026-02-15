@@ -8,4 +8,5 @@ export interface Product {
   category?: string;
   stock_quantity?: number;
   is_active?: boolean;
+  display_order?: number;
 }
