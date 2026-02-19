@@ -57,6 +57,8 @@ async function buildInvoiceBodyFromOrder(order: any, customerId: any) {
     DateIssued: today.toISOString().slice(0, 10), // YYYY-MM-DD
     DateDue: due.toISOString().slice(0, 10),
     Currency: { ID: currencyId },
+    InvoiceType: 'R',
+    // Note: DocumentNumbering cannot be set via API - configure default in Minimax: Nastavitve → Izdani računi → Privzeto številčenje → F1-1
     PricesOnInvoice: process.env.MINIMAX_PRICES_ON_INVOICE,
     IssuedInvoiceRows: rows,
     IssuedInvoicePaymentMethods: [
@@ -136,6 +138,7 @@ export async function createInvoiceForOrder({ orderId, bearerToken = null }: { o
     throw error;
   }
 }
+
 
 export async function createNewCustomer({ customerId, bearerToken = null }: { customerId: number; bearerToken?: string | null; }) {
   if (!customerId) throw new Error('customerId is required');
@@ -256,26 +259,3 @@ export async function getCustomerId(user: any) {
 }
 
 export { apiRequestToMinimax, getToken };
-export default {
-  getToken,
-  createInvoiceForOrder,
-  apiRequestToMinimax,
-  createNewCustomer,
-  getCustomerId
-};
-// CommonJS compatibility
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-(module as any).exports = {
-  getToken,
-  createInvoiceForOrder,
-  apiRequestToMinimax,
-  createNewCustomer,
-  getCustomerId
-};
-export default {
-  getToken,
-  createInvoiceForOrder,
-  apiRequestToMinimax,
-  createNewCustomer,
-  getCustomerId
-};

@@ -88,8 +88,16 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             const customerId = await (0, minimaxService_1.getCustomerId)(user);
             logger_1.default.info('Using customer ID for invoice:', customerId);
             // SEND API REQUEST TO CREATE INVOICE
+            if (!process.env.MINIMAX_NUMBERING_SERIES_ID) {
+                throw new Error('MINIMAX_NUMBERING_SERIES_ID not set');
+            }
+            if (!process.env.MINIMAX_EMPLOYEE_ID) {
+                throw new Error('MINIMAX_EMPLOYEE_ID not set');
+            }
             const invoicePayload = {
                 Customer: { ID: customerId },
+                DocumentNumbering: { ID: parseInt(process.env.MINIMAX_NUMBERING_SERIES_ID, 10) },
+                Employee: { ID: parseInt(process.env.MINIMAX_EMPLOYEE_ID, 10) },
                 DateIssued: date,
                 DateTransaction: date,
                 DateTransactionFrom: date,

@@ -27,13 +27,13 @@ class GlsService {
         this.password = process.env.GLS_PASSWORD;
         this.clientNumber = Number(process.env.GLS_CLIENT_ID);
         this.webshopEngine = process.env.GLS_WEBSHOP_ENGINE || 'Fritid';
-        // Use A4 format for viewable PDF (available options: A4_2x2, A4_4x1, Connect, Thermo, ThermoZPL)
-        this.typeOfPrinter = 'A4_4x1'; // Force A4 PDF format
+        // Use Connect format for 105x148mm label stickers
+        this.typeOfPrinter = process.env.GLS_DEFAULT_PRINTER;
         this.baseUrl = BASE;
 
-        // if (!this.username || !this.password || !this.clientNumber) {
-        //     throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
-        // }
+        if (!this.username || !this.password || !this.clientNumber) {
+            throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
+        }
     }
 
     /**
