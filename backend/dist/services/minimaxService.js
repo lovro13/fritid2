@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getToken = exports.apiRequestToMinimax = void 0;
 exports.createInvoiceForOrder = createInvoiceForOrder;
-exports.getNumberingSeries = getNumberingSeries;
 exports.createNewCustomer = createNewCustomer;
 exports.getCustomerId = getCustomerId;
 // @ts-nocheck
@@ -137,26 +136,6 @@ async function createInvoiceForOrder({ orderId, bearerToken = null }) {
         }
         throw error;
     }
-}
-async function getNumberingSeries({ bearerToken = null } = {}) {
-    const orgId = process.env.MINIMAX_ORG_ID;
-    if (!orgId)
-        throw new Error('MINIMAX_ORG_ID not set');
-    let token = bearerToken;
-    if (!token) {
-        const u = process.env.MINIMAX_USERNAME;
-        const p = process.env.MINIMAX_PASSWORD;
-        if (!u || !p)
-            throw new Error('Provide Bearer token or set MINIMAX_USERNAME and MINIMAX_PASSWORD');
-        const t = await (0, httpRequestsService_1.getToken)({ username: u, password: p });
-        token = t.access_token;
-    }
-    const [result] = await (0, httpRequestsService_1.apiRequestToMinimax)({
-        method: 'GET',
-        path: `orgs/${encodeURIComponent(orgId)}/issuednumberingseries`,
-        token,
-    });
-    return result;
 }
 async function createNewCustomer({ customerId, bearerToken = null }) {
     if (!customerId)
