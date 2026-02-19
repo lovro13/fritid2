@@ -174,6 +174,9 @@ jobs:
           MINIMAX_USERNAME: test_user
           MINIMAX_PASSWORD: test_pass
           MINIMAX_ORG_ID: 195730
+          GLS_USERNAME: dummy_gls_user
+          GLS_PASSWORD: dummy_gls_password
+          GLS_CLIENT_ID: dummy_gls_client_id
 
   test-frontend:
     runs-on: ubuntu-latest
