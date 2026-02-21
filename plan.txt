@@ -2,6 +2,7 @@ TODO later when deploying:
 - samo slovenski naslovi, protection pred boti (some sort of fritid protection)
 TODO:
 - bela črna na računu - na minimaxu, na mailu
+- minimax product ids
 - Uredu za stik z živili
 - arhiv poslt
 - popraviti admin naročila

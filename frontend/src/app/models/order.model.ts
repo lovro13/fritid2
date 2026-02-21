@@ -1,34 +1,29 @@
 export interface Order {
   id: number;
-  user_id: number;
   userId: number;
-  total_amount: number;
   totalAmount: number;
   status: string;
   paymentMethod: string;
-  shippingFirstName?: string;
-  shippingLastName?: string;
-  shippingEmail?: string;
-  shippingAddress?: string;
-  shippingPostalCode?: string;
-  shippingCity?: string;
-  shippingPhoneNumber?: string;
-  created_at: string;
+  shippingFirstName: string;
+  shippingLastName: string;
+  shippingEmail: string;
+  shippingAddress: string;
+  shippingPostalCode: string;
+  shippingCity: string;
+  shippingPhoneNumber: string;
   createdAt: string;
-  updated_at: string;
-  order_items?: OrderItem[];
-  orderItems?: OrderItem[];
+  orderItems: OrderItem[];
 }
 
 export interface OrderItem {
   id: number;
-  order_id: number;
-  product_id: number;
+  orderId: number;
+  productId: number;
   quantity: number;
   price: number;
-  product_name: string;
-  product_image_url: string;
-  color?: string;
+  productName: string;
+  productImageUrl: string | null;
+  color: string | null;
 }
 
 export interface PersonInfo {
