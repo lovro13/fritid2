@@ -37,10 +37,6 @@ jobs:
       - name: Build backend (TypeScript)
         run: npm run build
         working-directory: ./backend
-        env:
-          GLS_USERNAME: dummy_gls_user
-          GLS_PASSWORD: dummy_gls_password
-          GLS_CLIENT_ID: dummy_gls_client_id
         
       - name: Wait for MySQL
         run: |
@@ -180,7 +176,7 @@ jobs:
           MINIMAX_ORG_ID: 195730
           GLS_USERNAME: dummy_gls_user
           GLS_PASSWORD: dummy_gls_password
-          GLS_CLIENT_ID: dummy_gls_client_id
+          GLS_CLIENT_ID: 12345
 
   test-frontend:
     runs-on: ubuntu-latest
