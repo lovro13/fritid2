@@ -4,13 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getToken = exports.apiRequestToMinimax = void 0;
-exports.createInvoiceForOrder = createInvoiceForOrder;
 exports.createNewCustomer = createNewCustomer;
 exports.getCustomerId = getCustomerId;
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const Order_1 = __importDefault(require("../models/Order"));
-const Product_1 = __importDefault(require("../models/Product"));
 const User_1 = __importDefault(require("../models/User"));
 const logger_1 = __importDefault(require("../logger"));
 const httpRequestsService_1 = require("./httpRequestsService");
@@ -18,125 +13,6 @@ Object.defineProperty(exports, "apiRequestToMinimax", { enumerable: true, get: f
 Object.defineProperty(exports, "getToken", { enumerable: true, get: function () { return httpRequestsService_1.getToken; } });
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
 const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
-async function buildInvoiceBodyFromOrder(order, customerId) {
-    const orgId = process.env.MINIMAX_ORG_ID;
-    const currencyId = parseInt(process.env.MINIMAX_CURRENCY_ID, 10);
-    const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT);
-    const itemId = parseInt(process.env.MINIMAX_ITEM_ID, 10);
-    const paymentMethodId = parseInt(process.env.MINIMAX_PAYMENT_METHOD_ID, 10);
-    if (!orgId)
-        throw new Error('MINIMAX_ORG_ID not set');
-    if (!itemId)
-        throw new Error('MINIMAX_ITEM_ID not set');
-    if (!customerId)
-        throw new Error('customerId not provided');
-    if (!paymentMethodId)
-        throw new Error('MINIMAX_PAYMENT_METHOD_ID not set');
-    // Ensure orderItems with product names are loaded
-    if (!order.orderItems || order.orderItems.length === 0) {
-        await order.loadOrderItems();
-    }
-    const today = new Date();
-    const due = new Date(today);
-    const dueInDays = parseInt(process.env.MINIMAX_DUE_DAYS, 10);
-    due.setDate(today.getDate() + dueInDays);
-    const rows = [];
-    for (const oi of order.orderItems) {
-        let productName = oi.productName;
-        if (!productName) {
-            const p = await Product_1.default.findById(oi.productId);
-            productName = p?.name || `Product ${oi.productId}`;
-        }
-        rows.push({
-            Item: { ID: itemId },
-            Description: `${productName} (Order ${order.id})`,
-            Quantity: oi.quantity,
-            UnitOfMeasurement: process.env.MINIMAX_UOM,
-            Price: oi.price,
-            VATPercent: vatPercent,
-        });
-    }
-    const body = {
-        Customer: { ID: customerId },
-        DateIssued: today.toISOString().slice(0, 10), // YYYY-MM-DD
-        DateDue: due.toISOString().slice(0, 10),
-        Currency: { ID: currencyId },
-        InvoiceType: 'R',
-        // Note: DocumentNumbering cannot be set via API - configure default in Minimax: Nastavitve → Izdani računi → Privzeto številčenje → F1-1
-        PricesOnInvoice: process.env.MINIMAX_PRICES_ON_INVOICE,
-        IssuedInvoiceRows: rows,
-        IssuedInvoicePaymentMethods: [
-            {
-                PaymentMethod: { ID: paymentMethodId },
-                Amount: order.totalAmount,
-                AlreadyPaid: process.env.MINIMAX_ALREADY_PAID,
-            }
-        ]
-    };
-    return body;
-}
-async function createInvoiceForOrder({ orderId, bearerToken = null }) {
-    if (!orderId)
-        throw new Error('orderId is required');
-    const order = await Order_1.default.findById(orderId);
-    const orgId = process.env.MINIMAX_ORG_ID;
-    if (!order) {
-        const e = new Error('Order not found');
-        e.status = 404;
-        throw e;
-    }
-    await order.loadOrderItems();
-    // Get the user associated with the order
-    const user = await User_1.default.findById(order.userId);
-    if (!user) {
-        throw new Error(`User not found for order ${orderId}`);
-    }
-    // Get or create customer in Minimax
-    const customerId = await getCustomerId(user);
-    logger_1.default.info(`Using Minimax customer ID: ${customerId} for order ${orderId}`);
-    const body = await buildInvoiceBodyFromOrder(order, customerId);
-    let token = bearerToken;
-    if (!token) {
-        const u = process.env.MINIMAX_USERNAME;
-        const p = process.env.MINIMAX_PASSWORD;
-        if (!u || !p)
-            throw new Error('Provide Bearer token or set MINIMAX_USERNAME and MINIMAX_PASSWORD');
-        const t = await (0, httpRequestsService_1.getToken)({ username: u, password: p });
-        token = t.access_token;
-        logger_1.default.info("Created new token");
-    }
-    logger_1.default.info("Sending request to minimax to make invoice with body", body);
-    try {
-        const [result, _] = await (0, httpRequestsService_1.apiRequestToMinimax)({
-            method: 'POST',
-            path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
-            token,
-            body,
-        });
-        logger_1.default.info("Successfully made invoice in minimax");
-        return { orderId: order.id, invoice: result };
-    }
-    catch (error) {
-        // If token is invalid and we used bearerToken, try with fresh env token
-        if (error?.response?.status === 401 && bearerToken) {
-            logger_1.default.info("Bearer token invalid, trying with fresh env token");
-            const u = process.env.MINIMAX_USERNAME;
-            const p = process.env.MINIMAX_PASSWORD;
-            if (u && p) {
-                const t = await (0, httpRequestsService_1.getToken)({ username: u, password: p });
-                const [result, _] = await (0, httpRequestsService_1.apiRequestToMinimax)({
-                    method: 'POST',
-                    path: `orgs/${encodeURIComponent(orgId)}/issuedinvoices`,
-                    token: t.access_token,
-                    body,
-                });
-                logger_1.default.info("Successfully made invoice in minimax with fresh token");
-                return { orderId: order.id, invoice: result };
-            }
-        }
-        throw error;
-    }
-}
 async function createNewCustomer({ customerId, bearerToken = null }) {
     if (!customerId)
         throw new Error('customerId is required');

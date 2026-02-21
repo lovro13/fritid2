@@ -6,7 +6,6 @@ import Product from '../models/Product';
 import User from '../models/User';
 import { authenticateToken } from '../middleware/auth';
 import adminAuth from '../middleware/adminAuth';
-import { createInvoiceForOrder } from '../services/minimaxService';
 import { create_order_and_send_issue_to_mmax } from '../services/orderService';
 import MailService from '../services/mailService';
 import glsService from '../services/glsService';
@@ -163,6 +162,7 @@ router.post(
           ...product,
           quantity: item.quantity
         });
+        // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
       }
 
       const totalAmount = subtotal + SHIPPING_FEE;

@@ -151,6 +151,7 @@ router.post('/', [
                 ...product,
                 quantity: item.quantity
             });
+            // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
         }
         const totalAmount = subtotal + SHIPPING_FEE;
         logger_1.default.info('Creating order for user ID:', userId);

@@ -96,7 +96,7 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             }
             const invoicePayload = {
                 Customer: { ID: customerId },
-                DocumentNumbering: { ID: parseInt(process.env.MINIMAX_NUMBERING_SERIES_ID, 10) },
+                ...(process.env.NODE_ENV !== 'development' && { DocumentNumbering: { ID: parseInt(process.env.MINIMAX_NUMBERING_SERIES_ID, 10) } }),
                 Employee: { ID: parseInt(process.env.MINIMAX_EMPLOYEE_ID, 10) },
                 DateIssued: date,
                 DateTransaction: date,
