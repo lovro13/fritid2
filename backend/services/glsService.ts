@@ -3,6 +3,7 @@
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../logger');
 
 const envPath = process.env.ENV_PATH;
 dotenv.config({ path: envPath });
@@ -32,7 +33,7 @@ class GlsService {
         this.baseUrl = BASE;
 
         if (!this.username || !this.password || !this.clientNumber) {
-            throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
+            logger.error('GLS credentials not configured. GLS shipping labels will not work.');
         }
     }
 

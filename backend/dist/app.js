@@ -24,6 +24,9 @@ if (!process.env.JWT_SECRET) {
 if (process.env.JWT_SECRET.length < 32) {
     logger_1.default.warn('WARNING: JWT_SECRET should be at least 32 characters long for security');
 }
+if (!process.env.GLS_USERNAME || !process.env.GLS_PASSWORD || !process.env.GLS_CLIENT_ID) {
+    logger_1.default.warn('WARNING: GLS credentials not configured. Shipping labels will not work.');
+}
 // Import database initialization
 logger_1.default.info(`Environment: ${process.env.NODE_ENV ?? 'unknown'}`);
 const dbModel_1 = require("./models/dbModel");

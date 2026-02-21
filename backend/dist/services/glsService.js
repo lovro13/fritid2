@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv = require('dotenv');
 const fs = require('fs');
 const path = require('path');
+const logger = require('../logger');
 const envPath = process.env.ENV_PATH;
 dotenv.config({ path: envPath });
 const BASE = 'https://api.mygls.si/ParcelService.svc';
@@ -27,7 +28,7 @@ class GlsService {
         this.typeOfPrinter = process.env.GLS_DEFAULT_PRINTER;
         this.baseUrl = BASE;
         if (!this.username || !this.password || !this.clientNumber) {
-            throw new Error('GLS credentials not configured. Check GLS_USERNAME, GLS_PASSWORD, GLS_CLIENT_ID in .env');
+            logger.error('GLS credentials not configured. GLS shipping labels will not work.');
         }
     }
     /**
