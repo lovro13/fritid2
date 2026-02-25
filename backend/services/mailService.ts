@@ -215,9 +215,10 @@ class MailService {
 
             // Generate order items text for owner
             const subtotalOwner = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const orderItemsText = order.orderItems.map(item =>
-                `${item.productName}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`
-            ).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: ${SHIPPING_FEE.toFixed(2)} EUR`;
+            const orderItemsText = order.orderItems.map(item => {
+                const colorLine = item.color ? `\n  Barva: ${item.color}` : '';
+                return `${item.productName}${colorLine}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`;
+            }).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: ${SHIPPING_FEE.toFixed(2)} EUR`;
 
             // Replace variables in template with escaped user data
             let htmlContent = this.templates.ownerNotification
