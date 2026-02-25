@@ -109,6 +109,9 @@ class Product {
         ]);
         return this.findById(id);
     }
+    static async updateMinimaxId(id, minimaxId) {
+        await (0, dbModel_1.getPool)().execute('UPDATE products SET minimax_id = ? WHERE id = ?', [minimaxId, id]);
+    }
 }
 exports.default = Product;
 // CommonJS compatibility for existing require() usage

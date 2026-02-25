@@ -4,8 +4,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getToken = exports.apiRequestToMinimax = void 0;
+exports.buildInvoiceRowsFromCart = buildInvoiceRowsFromCart;
 exports.createNewCustomer = createNewCustomer;
 exports.getCustomerId = getCustomerId;
+const Product_1 = __importDefault(require("../models/Product"));
 const User_1 = __importDefault(require("../models/User"));
 const logger_1 = __importDefault(require("../logger"));
 const httpRequestsService_1 = require("./httpRequestsService");
@@ -13,6 +15,96 @@ Object.defineProperty(exports, "apiRequestToMinimax", { enumerable: true, get: f
 Object.defineProperty(exports, "getToken", { enumerable: true, get: function () { return httpRequestsService_1.getToken; } });
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
 const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
+function sanitizeCodePart(value) {
+    return value
+        .trim()
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '')
+        .toUpperCase();
+}
+function extractItemIdFromLocation(locationHeader) {
+    if (!locationHeader)
+        return null;
+    const match = locationHeader.match(/\/items\/(\d+)/);
+    return match ? match[1] : null;
+}
+async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }) {
+    const orgId = process.env.MINIMAX_ORG_ID;
+    if (!orgId)
+        throw new Error('MINIMAX_ORG_ID not set');
+    if (!process.env.MINIMAX_VAT_RATE_ID)
+        throw new Error('MINIMAX_VAT_RATE_ID not set');
+    const currencyId = process.env.MINIMAX_CURRENCY_ID;
+    const itemType = 'I';
+    const itemUsage = 'D';
+    const unitOfMeasurement = 'kos';
+    const invoiceRows = [];
+    for (let index = 0; index < cartItemsProducts.length; index += 1) {
+        const item = cartItemsProducts[index];
+        let minimaxItemId = item.minimax_id || null;
+        if (!minimaxItemId) {
+            const priceWithVat = parseFloat(String(item.price));
+            const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
+            const createBody = {
+                Name: item.name,
+                Code: `ITEM_${item.id}`,
+                Description: item.description || item.name,
+                ItemType: itemType,
+                UnitOfMeasurement: unitOfMeasurement,
+                VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID },
+                Usage: itemUsage,
+                Currency: { ID: currencyId },
+                Price: priceWithoutVat
+            };
+            logger_1.default.info('Creating Minimax item for product', { productId: item.id, code: createBody.Code });
+            const [result, headers] = await (0, httpRequestsService_1.apiRequestToMinimax)({
+                method: 'POST',
+                path: `orgs/${encodeURIComponent(orgId)}/items`,
+                token,
+                body: createBody
+            });
+            logger_1.default.info('Minimax item creation result', { productId: item.id, minimaxResult: result, headers });
+            minimaxItemId =
+                result?.ItemId ||
+                    result?.Item?.ID ||
+                    result?.ID ||
+                    extractItemIdFromLocation(headers?.location);
+            if (!minimaxItemId) {
+                throw new Error(`Failed to extract Minimax item ID for product ${item.id}`);
+            }
+            try {
+                await Product_1.default.updateMinimaxId(item.id, minimaxItemId);
+            }
+            catch (updateError) {
+                logger_1.default.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId, updateError });
+            }
+        }
+        const colorLabel = item.color || item.selectedColor || '';
+        const colorPart = colorLabel ? sanitizeCodePart(String(colorLabel)) : '';
+        const itemName = colorLabel ? `${item.name} - ${colorLabel}` : item.name;
+        const itemCode = colorPart ? `ITEM_${item.id}_${colorPart}` : `ITEM_${item.id}`;
+        const priceWithVat = parseFloat(String(item.price));
+        const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
+        const totalValueWithVat = priceWithVat * item.quantity;
+        invoiceRows.push({
+            Item: { ID: minimaxItemId || process.env.MINIMAX_ITEM_ID },
+            ItemName: itemName,
+            RowNumber: index + 1,
+            ItemCode: itemCode,
+            Description: item.description || item.name,
+            Quantity: item.quantity,
+            UnitOfMeasurement: unitOfMeasurement,
+            Price: priceWithoutVat,
+            PriceWithVAT: priceWithVat,
+            VATPercent: vatPercent,
+            Discount: 0,
+            DiscountPercent: 0,
+            Value: totalValueWithVat,
+            VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
+        });
+    }
+    return invoiceRows;
+}
 async function createNewCustomer({ customerId, bearerToken = null }) {
     if (!customerId)
         throw new Error('customerId is required');

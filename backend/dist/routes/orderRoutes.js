@@ -149,7 +149,8 @@ router.post('/', [
             subtotal += product.price * item.quantity;
             cartItemsProducts.push({
                 ...product,
-                quantity: item.quantity
+                quantity: item.quantity,
+                color: item.selectedColor
             });
             // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
         }
@@ -183,11 +184,11 @@ router.post('/', [
                 productId: product.id,
                 quantity: item.quantity,
                 price: product.price,
-                color: item.selectedColor || null
+                color: item.selectedColor
             });
         }
         logger_1.default.info('All cart items verified and order items created in database', { orderId: order.id });
-        const minimax_invoice_result = await (0, orderService_1.create_order_and_send_issue_to_mmax)({ order, user, cartItemsProducts });
+        const minimax_invoice_result = await (0, orderService_1.create_order)({ order, user, cartItemsProducts });
         if (minimax_invoice_result.invoiceError) {
             logger_1.default.error('Minimax integration failed for order', { orderId: minimax_invoice_result.orderId, error: minimax_invoice_result.invoiceError });
             return res.status(500).json({

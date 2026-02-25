@@ -6,7 +6,7 @@ import Product from '../models/Product';
 import User from '../models/User';
 import { authenticateToken } from '../middleware/auth';
 import adminAuth from '../middleware/adminAuth';
-import { create_order_and_send_issue_to_mmax } from '../services/orderService';
+import { create_order } from '../services/orderService';
 import MailService from '../services/mailService';
 import glsService from '../services/glsService';
 import JWTService from '../services/jwtService';
@@ -160,7 +160,8 @@ router.post(
         subtotal += product.price * item.quantity;
         cartItemsProducts.push({
           ...product,
-          quantity: item.quantity
+          quantity: item.quantity,
+          color: item.selectedColor
         });
         // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
       }
@@ -197,12 +198,12 @@ router.post(
           productId: product.id,
           quantity: item.quantity,
           price: product.price,
-          color: item.selectedColor || null
+          color: item.selectedColor
         });
       }
 
       logger.info('All cart items verified and order items created in database', { orderId: order.id });
-      const minimax_invoice_result = await create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts });
+      const minimax_invoice_result = await create_order({ order, user, cartItemsProducts });
 
       if ((minimax_invoice_result as any).invoiceError) {
         logger.error('Minimax integration failed for order', { orderId: (minimax_invoice_result as any).orderId, error: (minimax_invoice_result as any).invoiceError });

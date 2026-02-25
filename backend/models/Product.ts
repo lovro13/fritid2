@@ -168,6 +168,13 @@ class Product {
     );
     return this.findById(id);
   }
+
+  static async updateMinimaxId(id: number, minimaxId: string | number): Promise<void> {
+    await getPool().execute<ResultSetHeader>(
+      'UPDATE products SET minimax_id = ? WHERE id = ?',
+      [minimaxId, id]
+    );
+  }
 }
 
 export default Product;

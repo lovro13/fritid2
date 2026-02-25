@@ -3,7 +3,7 @@ TODO later when deploying:
 TODO:
 - bela črna na računu - na minimaxu, na mailu
 - Uredu za stik z živili, na minimaxu in na računu
-- arhiv poslt
+
 TODO random:
 - mail verification?
 - more admin access to the whole database and manage the whole database

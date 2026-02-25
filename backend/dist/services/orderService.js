@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.create_order_and_send_issue_to_mmax = create_order_and_send_issue_to_mmax;
+exports.create_order = create_order;
 const Product_1 = __importDefault(require("../models/Product"));
 const minimaxService_1 = require("./minimaxService");
 const httpRequestsService_1 = require("./httpRequestsService");
@@ -11,7 +11,11 @@ const logger_1 = __importDefault(require("../logger"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const idPostnina = 324;
-async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProducts }) {
+async function create_order({ order, user, cartItemsProducts }) {
+    // Creates order and sends issues to minimax and generates invoice PDF if needed 
+    // and makes stickers from GLS and sends 2 mails,
+    // 1 to owner and 1 to customer. If anything fails, it should not fail the whole
+    // operation, but just log the error and continue with the rest of the operations
     const orgId = process.env.MINIMAX_ORG_ID;
     const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT || '0');
     let invoiceId = null;
@@ -35,29 +39,14 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             // Calculate dates for invoice
             const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
             const dueDate = new Date();
+            // TODO: remove '14' and use environment variable, need to do in prod
             dueDate.setDate(dueDate.getDate() + parseInt(process.env.MINIMAX_DUE_DAYS || '14', 10));
             const dueDateStr = dueDate.toISOString().split('T')[0];
             // PREPARE MINIMAX ITEMS
-            const invoiceRows = cartItemsProducts.map((item, index) => {
-                const priceWithVat = parseFloat(String(item.price));
-                const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
-                const totalValueWithVat = priceWithVat * item.quantity;
-                return {
-                    Item: { ID: item.minimax_id || process.env.MINIMAX_ITEM_ID },
-                    ItemName: item.name,
-                    RowNumber: index + 1,
-                    ItemCode: `ITEM_${item.id}`,
-                    Description: item.description || item.name,
-                    Quantity: item.quantity,
-                    UnitOfMeasurement: "kos",
-                    Price: priceWithoutVat,
-                    PriceWithVAT: priceWithVat,
-                    VATPercent: vatPercent,
-                    Discount: 0,
-                    DiscountPercent: 0,
-                    Value: totalValueWithVat,
-                    VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID }
-                };
+            const invoiceRows = await (0, minimaxService_1.buildInvoiceRowsFromCart)({
+                cartItemsProducts,
+                vatPercent,
+                token
             });
             // Add shipping cost
             if (idPostnina) {
@@ -94,6 +83,9 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
             if (!process.env.MINIMAX_EMPLOYEE_ID) {
                 throw new Error('MINIMAX_EMPLOYEE_ID not set');
             }
+            if (!process.env.MINIMAX_COUNTRY_SLOVENIA_ID) {
+                throw new Error('MINIMAX_COUNTRY_SLOVENIA_ID not set');
+            }
             const invoicePayload = {
                 Customer: { ID: customerId },
                 ...(process.env.NODE_ENV !== 'development' && { DocumentNumbering: { ID: parseInt(process.env.MINIMAX_NUMBERING_SERIES_ID, 10) } }),
@@ -106,9 +98,8 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
                 AddresseeAddress: order.shippingAddress,
                 AddresseePostalCode: order.shippingPostalCode,
                 AddresseeCity: order.shippingCity,
-                AddresseeCountryName: "Slovenia",
-                AddresseeCountry: { ID: 191 }, // Slovenia country ID
-                Currency: { ID: process.env.MINIMAX_CURRENCY_ID || 7 }, // EUR
+                AddresseeCountry: { ID: 192 },
+                Currency: { ID: process.env.MINIMAX_CURRENCY_ID }, // EUR
                 PaymentMethod: { ID: process.env.MINIMAX_PAYMENT_METHOD_ID },
                 Status: "O", // Open status
                 PricesOnInvoice: process.env.MINIMAX_PRICES_ON_INVOICE,
@@ -198,8 +189,8 @@ async function create_order_and_send_issue_to_mmax({ order, user, cartItemsProdu
     }
 }
 exports.default = {
-    create_order_and_send_issue_to_mmax
+    create_order_and_send_issue_to_mmax: create_order
 };
 // CommonJS compatibility
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-module.exports = { create_order_and_send_issue_to_mmax };
+module.exports = { create_order };
