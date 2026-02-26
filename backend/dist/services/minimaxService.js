@@ -15,6 +15,7 @@ Object.defineProperty(exports, "apiRequestToMinimax", { enumerable: true, get: f
 Object.defineProperty(exports, "getToken", { enumerable: true, get: function () { return httpRequestsService_1.getToken; } });
 const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL;
 const MINIMAX_BASIC_B64 = process.env.MINIMAX_BASIC_B64 || '';
+const FOOD_CONTACT_TEXT = 'Izdelek ustreza pogojem za stik z živili.';
 function sanitizeCodePart(value) {
     return value
         .trim()
@@ -45,10 +46,12 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
         if (!minimaxItemId) {
             const priceWithVat = parseFloat(String(item.price));
             const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
+            const baseDesc = item.description || item.name;
+            const description = [baseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
             const createBody = {
                 Name: item.name,
                 Code: `ITEM_${item.id}`,
-                Description: item.description || item.name,
+                Description: description,
                 ItemType: itemType,
                 UnitOfMeasurement: unitOfMeasurement,
                 VatRate: { ID: process.env.MINIMAX_VAT_RATE_ID },
