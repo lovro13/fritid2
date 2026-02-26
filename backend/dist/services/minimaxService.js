@@ -29,6 +29,14 @@ function extractItemIdFromLocation(locationHeader) {
     const match = locationHeader.match(/\/items\/(\d+)/);
     return match ? match[1] : null;
 }
+function isDuplicateCodeError(error) {
+    const status = error?.response?.status;
+    if (status === 409)
+        return true;
+    const data = error?.response?.data;
+    const message = typeof data === 'string' ? data : JSON.stringify(data || '');
+    return /sifra|šifra|code|exists/i.test(message);
+}
 async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }) {
     const orgId = process.env.MINIMAX_ORG_ID;
     if (!orgId)
@@ -40,17 +48,17 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
     const itemUsage = 'D';
     const unitOfMeasurement = 'kos';
     const invoiceRows = [];
+    const itemIdCache = new Map();
     for (let index = 0; index < cartItemsProducts.length; index += 1) {
         const item = cartItemsProducts[index];
-        let minimaxItemId = item.minimax_id || null;
+        let minimaxItemId = item.minimax_id || itemIdCache.get(item.id) || null;
         if (!minimaxItemId) {
             const priceWithVat = parseFloat(String(item.price));
             const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
             const baseDesc = item.description || item.name;
             const description = [baseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
-            const createBody = {
+            const baseBody = {
                 Name: item.name,
-                Code: `ITEM_${item.id}`,
                 Description: description,
                 ItemType: itemType,
                 UnitOfMeasurement: unitOfMeasurement,
@@ -59,14 +67,41 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
                 Currency: { ID: currencyId },
                 Price: priceWithoutVat
             };
-            logger_1.default.info('Creating Minimax item for product', { productId: item.id, code: createBody.Code });
-            const [result, headers] = await (0, httpRequestsService_1.apiRequestToMinimax)({
-                method: 'POST',
-                path: `orgs/${encodeURIComponent(orgId)}/items`,
-                token,
-                body: createBody
-            });
-            logger_1.default.info('Minimax item creation result', { productId: item.id, minimaxResult: result, headers });
+            const baseCode = `ITEM_${item.id}`;
+            const codesToTry = [baseCode,
+                `${baseCode}_1`,
+                `${baseCode}_2`,
+                `${baseCode}_3`,
+                `${baseCode}_4`,
+                `${baseCode}_5`];
+            let result = null;
+            let headers = null;
+            let usedCode = baseCode;
+            for (let attempt = 0; attempt < codesToTry.length; attempt += 1) {
+                const code = codesToTry[attempt];
+                usedCode = code;
+                try {
+                    logger_1.default.info('Creating Minimax item for product', { productId: item.id, code, attempt });
+                    [result, headers] = await (0, httpRequestsService_1.apiRequestToMinimax)({
+                        method: 'POST',
+                        path: `orgs/${encodeURIComponent(orgId)}/items`,
+                        token,
+                        body: { ...baseBody, Code: code }
+                    });
+                    break;
+                }
+                catch (error) {
+                    if (isDuplicateCodeError(error) && attempt < codesToTry.length - 1) {
+                        logger_1.default.warn('Minimax item code already exists, retrying', { productId: item.id, code, attempt });
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            if (!result) {
+                throw new Error(`Failed to create Minimax item for product ${item.id} after trying ${codesToTry.join(', ')}`);
+            }
+            logger_1.default.info('Minimax item creation result', { productId: item.id, code: usedCode, minimaxResult: result, headers });
             minimaxItemId =
                 result?.ItemId ||
                     result?.Item?.ID ||
@@ -82,10 +117,15 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
                 logger_1.default.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId, updateError });
             }
         }
+        if (minimaxItemId) {
+            itemIdCache.set(item.id, minimaxItemId);
+        }
         const colorLabel = item.color || item.selectedColor || '';
         const colorPart = colorLabel ? sanitizeCodePart(String(colorLabel)) : '';
         const itemName = colorLabel ? `${item.name} - ${colorLabel}` : item.name;
         const itemCode = colorPart ? `ITEM_${item.id}_${colorPart}` : `ITEM_${item.id}`;
+        const rowBaseDesc = item.description || item.name;
+        const rowDescription = [rowBaseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
         const priceWithVat = parseFloat(String(item.price));
         const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
         const totalValueWithVat = priceWithVat * item.quantity;
@@ -94,7 +134,7 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
             ItemName: itemName,
             RowNumber: index + 1,
             ItemCode: itemCode,
-            Description: item.description || item.name,
+            Description: rowDescription,
             Quantity: item.quantity,
             UnitOfMeasurement: unitOfMeasurement,
             Price: priceWithoutVat,

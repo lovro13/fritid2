@@ -25,6 +25,14 @@ function extractItemIdFromLocation(locationHeader?: string | null): string | nul
   return match ? match[1] : null;
 }
 
+function isDuplicateCodeError(error: any): boolean {
+  const status = error?.response?.status;
+  if (status === 409) return true;
+  const data = error?.response?.data;
+  const message = typeof data === 'string' ? data : JSON.stringify(data || '');
+  return /sifra|šifra|code|exists/i.test(message);
+}
+
 export async function buildInvoiceRowsFromCart({
   cartItemsProducts,
   vatPercent,
@@ -44,19 +52,19 @@ export async function buildInvoiceRowsFromCart({
   const unitOfMeasurement = 'kos';
 
   const invoiceRows: any[] = [];
+  const itemIdCache = new Map<number, string | number>();
 
   for (let index = 0; index < cartItemsProducts.length; index += 1) {
     const item = cartItemsProducts[index];
 
-    let minimaxItemId = item.minimax_id || null;
+    let minimaxItemId = item.minimax_id || itemIdCache.get(item.id) || null;
     if (!minimaxItemId) {
       const priceWithVat = parseFloat(String(item.price));
       const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
       const baseDesc = item.description || item.name;
       const description = [baseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
-      const createBody = {
+      const baseBody = {
         Name: item.name,
-        Code: `ITEM_${item.id}`,
         Description: description,
         ItemType: itemType,
         UnitOfMeasurement: unitOfMeasurement,
@@ -66,15 +74,43 @@ export async function buildInvoiceRowsFromCart({
         Price: priceWithoutVat
       };
 
-      logger.info('Creating Minimax item for product', { productId: item.id, code: createBody.Code });
-      const [result, headers] = await apiRequestToMinimax({
-        method: 'POST',
-        path: `orgs/${encodeURIComponent(orgId)}/items`,
-        token,
-        body: createBody
-      });
+      const baseCode = `ITEM_${item.id}`;
+      const codesToTry = [baseCode, 
+        `${baseCode}_1`,
+         `${baseCode}_2`,
+          `${baseCode}_3`,
+           `${baseCode}_4`,
+            `${baseCode}_5`];
+      let result: any = null;
+      let headers: any = null;
+      let usedCode = baseCode;
 
-      logger.info('Minimax item creation result', { productId: item.id, minimaxResult: result, headers });
+      for (let attempt = 0; attempt < codesToTry.length; attempt += 1) {
+        const code = codesToTry[attempt];
+        usedCode = code;
+        try {
+          logger.info('Creating Minimax item for product', { productId: item.id, code, attempt });
+          [result, headers] = await apiRequestToMinimax({
+            method: 'POST',
+            path: `orgs/${encodeURIComponent(orgId)}/items`,
+            token,
+            body: { ...baseBody, Code: code }
+          });
+          break;
+        } catch (error) {
+          if (isDuplicateCodeError(error) && attempt < codesToTry.length - 1) {
+            logger.warn('Minimax item code already exists, retrying', { productId: item.id, code, attempt });
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!result) {
+        throw new Error(`Failed to create Minimax item for product ${item.id} after trying ${codesToTry.join(', ')}`);
+      }
+
+      logger.info('Minimax item creation result', { productId: item.id, code: usedCode, minimaxResult: result, headers });
       minimaxItemId =
         result?.ItemId ||
         result?.Item?.ID ||
@@ -92,10 +128,16 @@ export async function buildInvoiceRowsFromCart({
       }
     }
 
+    if (minimaxItemId) {
+      itemIdCache.set(item.id, minimaxItemId);
+    }
+
     const colorLabel = item.color || item.selectedColor || '';
     const colorPart = colorLabel ? sanitizeCodePart(String(colorLabel)) : '';
     const itemName = colorLabel ? `${item.name} - ${colorLabel}` : item.name;
     const itemCode = colorPart ? `ITEM_${item.id}_${colorPart}` : `ITEM_${item.id}`;
+    const rowBaseDesc = item.description || item.name;
+    const rowDescription = [rowBaseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
 
     const priceWithVat = parseFloat(String(item.price));
     const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
@@ -106,7 +148,7 @@ export async function buildInvoiceRowsFromCart({
       ItemName: itemName,
       RowNumber: index + 1,
       ItemCode: itemCode,
-      Description: item.description || item.name,
+      Description: rowDescription,
       Quantity: item.quantity,
       UnitOfMeasurement: unitOfMeasurement,
       Price: priceWithoutVat,
