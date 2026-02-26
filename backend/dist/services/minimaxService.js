@@ -124,7 +124,7 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
         const colorPart = colorLabel ? sanitizeCodePart(String(colorLabel)) : '';
         const itemName = colorLabel ? `${item.name} - ${colorLabel}` : item.name;
         const itemCode = colorPart ? `ITEM_${item.id}_${colorPart}` : `ITEM_${item.id}`;
-        const rowBaseDesc = item.description || item.name;
+        const rowBaseDesc = (item.description || item.name) + '. ';
         const rowDescription = [rowBaseDesc, FOOD_CONTACT_TEXT].filter(Boolean).join(' ');
         const priceWithVat = parseFloat(String(item.price));
         const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
