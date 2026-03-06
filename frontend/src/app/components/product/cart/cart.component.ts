@@ -38,11 +38,9 @@ export class CartComponent {
   }
 
   increaseQuantity(item: CartItem) {
-    if (item.quantity < 99) {
-      item.quantity++;
-      this.cartService.updateCartItemQuantity(item, item.quantity);
-      this.updateTotal();
-    }
+    item.quantity = Math.max(1, Math.floor(item.quantity || 1)) + 1;
+    this.cartService.updateCartItemQuantity(item, item.quantity);
+    this.updateTotal();
   }
 
   decreaseQuantity(item: CartItem) {
@@ -56,22 +54,16 @@ export class CartComponent {
   updateQuantity(item: CartItem, event: Event) {
     const target = event.target as HTMLInputElement;
     const newQuantity = parseInt(target.value, 10);
-    
-    if (newQuantity >= 1 && newQuantity <= 99) {
-      item.quantity = newQuantity;
-      this.cartService.updateCartItemQuantity(item, newQuantity);
-      this.updateTotal();
-    } else if (newQuantity < 1) {
+
+    if (Number.isNaN(newQuantity) || newQuantity < 1) {
       item.quantity = 1;
       target.value = '1';
-      this.cartService.updateCartItemQuantity(item, 1);
-      this.updateTotal();
     } else {
-      item.quantity = 99;
-      target.value = '99';
-      this.cartService.updateCartItemQuantity(item, 99);
-      this.updateTotal();
+      item.quantity = newQuantity;
     }
+
+    this.cartService.updateCartItemQuantity(item, item.quantity);
+    this.updateTotal();
   }
 
   private updateTotal() {

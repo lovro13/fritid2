@@ -57,11 +57,10 @@
           <input 
             type="number" 
             min="1" 
-            max="99"
             [(ngModel)]="selectedQuantity"
             class="quantity-input"
           >
-          <button class="quantity-btn" (click)="increaseQuantity()" [disabled]="selectedQuantity >= 99">
+          <button class="quantity-btn" (click)="increaseQuantity()">
             +
           </button>
         </div>

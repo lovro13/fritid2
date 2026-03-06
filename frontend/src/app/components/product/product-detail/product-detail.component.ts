@@ -74,15 +74,16 @@ export class ProductDetailComponent implements OnInit {
   }
 
   addToCart(product: Product) {
-    this.productService.addItemToCart(product, this.selectedQuantity, this.selectedColor);
+    const quantity = Number.isFinite(this.selectedQuantity) && this.selectedQuantity >= 1
+      ? Math.floor(this.selectedQuantity)
+      : 1;
+    this.productService.addItemToCart(product, quantity, this.selectedColor);
     // Reset quantity after adding to cart
     this.selectedQuantity = 1;
   }
 
   increaseQuantity() {
-    if (this.selectedQuantity < 99) {
-      this.selectedQuantity++;
-    }
+    this.selectedQuantity = Math.max(1, Math.floor(this.selectedQuantity || 1)) + 1;
   }
 
   decreaseQuantity() {
