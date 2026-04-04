@@ -30,6 +30,6 @@ export class OrderService {
 
   // Checkout operation
   createOrder(orderData: any): Observable<Order> {
-    return this.http.post<Order>(`${this.apiUrl}/order`, orderData);
+    return this.http.post<Order>(`${this.apiUrl}/orders`, orderData);
   }
 }

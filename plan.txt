@@ -2,7 +2,8 @@ TODO deploying:
 - samo slovenski naslovi
 - deploy the latest push
 TODO:
-
+- button for osebni prevzem, prob backend job too
 TODO random:
 - mail verification?
 - more admin access to the whole database and manage the whole database
+- docs

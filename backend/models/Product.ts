@@ -112,11 +112,11 @@ class Product {
   }
 
   static async create(data: ProductInput): Promise<Product | null> {
-    const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id } = data;
+    const { name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id, display_order } = data;
     const [res] = await getPool().execute<ResultSetHeader>(
       `INSERT INTO products
-             (name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (name, description, price, image_url, colors, category, stock_quantity, is_active, minimax_id, display_order)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name,
         description ?? null,
@@ -126,7 +126,8 @@ class Product {
         category ?? null,
         stock_quantity ?? 0,
         is_active ?? 1,
-        minimax_id ?? null
+        minimax_id ?? null,
+        display_order ?? 0
       ]
     );
     return this.findById(res.insertId);

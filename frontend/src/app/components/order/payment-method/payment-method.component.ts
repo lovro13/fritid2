@@ -1,13 +1,9 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProductsService } from '../../../service/products.service';
-import { UserService } from '../../../service/user.service';
 import { OrderService } from '../../../service/order.service';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { combineLatest, take } from 'rxjs';
-import { environment } from '../../../../environments/environment';
 
 // Constants for order calculation
 export const SHIPPING_COST = 5.99; // Shipping cost constant
@@ -18,7 +14,7 @@ export const VAT_RATE = 0.22; // 22% VAT rate
   selector: 'app-payment-method',
   templateUrl: './payment-method.component.html',
   styleUrls: ['./payment-method.component.scss'],
-  imports: [ReactiveFormsModule, CurrencyPipe]
+  imports: [CurrencyPipe]
 })
 export class PaymentMethodComponent implements OnInit {
   @Input() total: number = 0;
@@ -36,10 +32,8 @@ export class PaymentMethodComponent implements OnInit {
   cartItems: any[] = [];
 
 
-  constructor(private fb: FormBuilder,
-    private cartService: ProductsService,
+  constructor(private cartService: ProductsService,
     private orderService: OrderService,
-    private http: HttpClient,
     private router: Router) {
   }
 
@@ -108,10 +102,8 @@ export class PaymentMethodComponent implements OnInit {
           cartItems,
           typeOfOrder: this.selectedMethod
         };
-        
-        console.log('Checkout payload:', payload);
-        console.log('sending to backend: ', `${environment.apiBase}/orders`)
-        this.http.post(`${environment.apiBase}/orders`, payload).subscribe({
+
+        this.orderService.createOrder(payload).subscribe({
           next: (response) => {
             console.log('Checkout success', response);
             this.isProcessing = false;

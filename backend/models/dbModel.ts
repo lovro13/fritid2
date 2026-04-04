@@ -65,11 +65,13 @@ async function createTables(): Promise<void> {
         category VARCHAR(100),
         stock_quantity INT NOT NULL DEFAULT 0,
         minimax_id VARCHAR(255) NULL,
+        display_order INT NOT NULL DEFAULT 0,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_products_active (is_active),
-        INDEX idx_products_price (price)
+        INDEX idx_products_price (price),
+        INDEX idx_display_order (display_order)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
 

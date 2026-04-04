@@ -28,6 +28,7 @@ async function initializeDatabase() {
         logger_1.default.info('Successfully connected to MySQL database.');
         connection.release();
         await createTables();
+        await runMigrations();
         logger_1.default.info('DB init OK (MySQL)');
     }
     catch (error) {
@@ -67,11 +68,13 @@ async function createTables() {
         category VARCHAR(100),
         stock_quantity INT NOT NULL DEFAULT 0,
         minimax_id VARCHAR(255) NULL,
+        display_order INT NOT NULL DEFAULT 0,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_products_active (is_active),
-        INDEX idx_products_price (price)
+        INDEX idx_products_price (price),
+        INDEX idx_display_order (display_order)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `);
         await connection.query(`
@@ -113,6 +116,37 @@ async function createTables() {
     }
     finally {
         connection.release();
+    }
+}
+async function runMigrations() {
+    if (!pool)
+        throw new Error('DB not initialized');
+    const connection = await pool.getConnection();
+    try {
+        await ensureProductsDisplayOrderSchema(connection);
+    }
+    finally {
+        connection.release();
+    }
+}
+async function ensureProductsDisplayOrderSchema(connection) {
+    const [displayOrderColumns] = await connection.query("SHOW COLUMNS FROM products LIKE 'display_order'");
+    if (displayOrderColumns.length === 0) {
+        await connection.query(`
+      ALTER TABLE products
+      ADD COLUMN display_order INT NOT NULL DEFAULT 0 AFTER minimax_id
+    `);
+        logger_1.default.info('Added products.display_order column');
+    }
+    await connection.query(`
+    UPDATE products
+    SET display_order = id
+    WHERE display_order = 0
+  `);
+    const [displayOrderIndexes] = await connection.query("SHOW INDEX FROM products WHERE Key_name = 'idx_display_order'");
+    if (displayOrderIndexes.length === 0) {
+        await connection.query('CREATE INDEX idx_display_order ON products(display_order)');
+        logger_1.default.info('Created idx_display_order index');
     }
 }
 function getPool() {
