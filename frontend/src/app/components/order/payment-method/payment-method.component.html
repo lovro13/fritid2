@@ -1,6 +1,6 @@
 <!-- payment-method.component.html -->
 <div class="payment-container">
-  <h2>Izberite način plačila</h2>
+  <h2>Izberite način plačila ali prevzema</h2>
 
   <!-- Order Summary -->
   <div class="order-summary">
@@ -21,7 +21,7 @@
         <span>{{ subtotal | currency:'EUR' }}</span>
       </div>
       <div class="total-line">
-        <span>Dostava:</span>
+        <span>{{ shippingLabel }}:</span>
         <span>{{ shippingCost === 0 ? 'Brezplačno' : (shippingCost | currency:'EUR') }}</span>
       </div>
       @if (subtotal >= 50) {
@@ -54,6 +54,14 @@
       <p>Plačilo v gotovini ob prevzemu paketa</p>
     </div>
 
+    <div class="payment-option" [class.selected]="selectedMethod === 'pickup'" (click)="selectMethod('pickup')">
+      <div class="option-header">
+        <i class="icon cash"></i>
+        <h3>Osebni prevzem</h3>
+      </div>
+      <p>Izdelek prevzamete osebno na naslovu Spodnje Stranje 33, brez stroška dostave.</p>
+    </div>
+
   <!-- Card Payment Form -->
   @if (selectedMethod === 'upn') {
 
@@ -80,6 +88,25 @@
       <i class="icon cash-large"></i>
       <h3>Plačilo po prevzetju</h3>
       <p>Pri prevzemu paketa boste plačali znesek.</p>
+      <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
+      <button class="confirm-button" (click)="confirmPayment()" [disabled]="isProcessing">
+        {{ isProcessing ? 'Obdelava naročila...' : 'Potrdi naročilo' }}
+      </button>
+      @if (isProcessing) {
+        <p class="processing-message">⏳ Naročilo se obdeluje, prosimo počakajte...</p>
+      }
+    </div>
+  </div>
+  }
+
+  @if (selectedMethod === 'pickup') {
+
+  <div class="payment-confirmation">
+    <div class="confirmation-content">
+      <i class="icon cash-large"></i>
+      <h3>Osebni prevzem</h3>
+      <p>Izdelek vas bo čakal za osebni prevzem na naslovu <strong>Spodnje Stranje 33</strong>.</p>
+      <p>Ob prevzemu ni stroška dostave.</p>
       <p>Skupni znesek: <strong>{{ totalAmount | currency:'EUR' }}</strong></p>
       <button class="confirm-button" (click)="confirmPayment()" [disabled]="isProcessing">
         {{ isProcessing ? 'Obdelava naročila...' : 'Potrdi naročilo' }}

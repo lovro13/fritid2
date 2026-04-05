@@ -46,7 +46,13 @@ export class OrdersManagementComponent implements OnInit {
   }
   
   getPaymentMethodLabel(method: string): string {
-    return method === 'UPN' ? 'UPN nalog' : 'Plačilo ob dostavi';
+    if (method === 'UPN') {
+      return 'UPN nalog';
+    }
+    if (method === 'PICKUP') {
+      return 'Osebni prevzem';
+    }
+    return 'Plačilo ob dostavi';
   }
   
   formatDate(dateString: string): string {

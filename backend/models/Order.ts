@@ -4,7 +4,7 @@ import User from './User';
 import logger from '../logger';
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
-export type PaymentMethod = 'DELIVERY' | 'UPN';
+export type PaymentMethod = 'DELIVERY' | 'UPN' | 'PICKUP';
 
 export interface OrderRow extends RowDataPacket {
   id: number;
@@ -96,7 +96,8 @@ class Order {
   static get PAYMENT_METHOD(): Record<string, PaymentMethod> {
     return {
       DELIVERY: 'DELIVERY',
-      UPN: 'UPN'
+      UPN: 'UPN',
+      PICKUP: 'PICKUP'
     };
   }
 

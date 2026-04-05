@@ -7,7 +7,7 @@ import { combineLatest, take } from 'rxjs';
 
 // Constants for order calculation
 export const SHIPPING_COST = 5.99; // Shipping cost constant
-export const VAT_RATE = 0.22; // 22% VAT rate
+type OrderMethod = 'upn' | 'cash' | 'pickup';
 
 @Component({
   standalone: true,
@@ -20,14 +20,12 @@ export class PaymentMethodComponent implements OnInit {
   @Input() total: number = 0;
   @Output() paymentComplete = new EventEmitter<string>();
 
-  selectedMethod: string | null = null;
-  selectedBank: string = "";
+  selectedMethod: OrderMethod | null = null;
   isProcessing: boolean = false;
 
   // Order summary properties
   subtotal: number = 0;
   shippingCost: number = SHIPPING_COST;
-  vatAmount: number = 0;
   totalAmount: number = 0;
   cartItems: any[] = [];
 
@@ -55,15 +53,7 @@ export class PaymentMethodComponent implements OnInit {
       this.subtotal = cartItems.reduce((sum, item) => {
         return sum + (parseFloat(item.product.price.toString()) * item.quantity);
       }, 0);
-
-      // Calculate shipping (free shipping above threshold)
-      this.shippingCost = SHIPPING_COST;
-
-      // Final total (subtotal + shipping)
-      this.totalAmount = this.subtotal + this.shippingCost;
-      
-      // Update the input total as well
-      this.total = this.totalAmount;
+      this.updateTotals();
     });
   }
 
@@ -72,24 +62,35 @@ export class PaymentMethodComponent implements OnInit {
     return parseFloat(price.toString()) * quantity;
   }
 
-  get vatRate(): number {
-    return VAT_RATE;
+  get shippingLabel(): string {
+    return this.selectedMethod === 'pickup' ? 'Osebni prevzem' : 'Dostava';
   }
 
-  selectMethod(method: string) {
+  selectMethod(method: OrderMethod) {
     this.selectedMethod = method;
+    this.updateTotals();
+  }
+
+  private getShippingCost(): number {
+    return this.selectedMethod === 'pickup' ? 0 : SHIPPING_COST;
+  }
+
+  private updateTotals() {
+    this.shippingCost = this.getShippingCost();
+    this.totalAmount = this.subtotal + this.shippingCost;
+    this.total = this.totalAmount;
   }
 
 
   confirmPayment() {
+      if (!this.selectedMethod) {
+        alert('Prosimo, izberite način plačila ali prevzema.');
+        return;
+      }
+
       console.log('Payment confirmed');
       this.isProcessing = true;
-      
-      if (this.selectedMethod == 'cash')  {
-        this.paymentComplete.emit('cash');
-      } else {
-        this.paymentComplete.emit('upn');
-      }
+      this.paymentComplete.emit(this.selectedMethod);
       
       combineLatest([
         this.orderService.personInfo$,

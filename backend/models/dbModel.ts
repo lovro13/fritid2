@@ -88,7 +88,7 @@ async function createTables(): Promise<void> {
         shipping_postal_code VARCHAR(20) NOT NULL,
         shipping_city VARCHAR(100) NOT NULL,
         shipping_phone_number VARCHAR(20) NOT NULL,
-        payment_method ENUM('DELIVERY', 'UPN') NOT NULL DEFAULT 'DELIVERY',
+        payment_method ENUM('DELIVERY', 'UPN', 'PICKUP') NOT NULL DEFAULT 'DELIVERY',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
         INDEX idx_orders_user_id (user_id),

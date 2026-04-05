@@ -20,6 +20,7 @@ export async function create_order({ order, user, cartItemsProducts }:
     // operation, but just log the error and continue with the rest of the operations
     const orgId = process.env.MINIMAX_ORG_ID;
     const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT || '0');
+    const includeShipping = order.paymentMethod !== 'PICKUP';
     let invoiceId = null;
 
     try {
@@ -56,7 +57,7 @@ export async function create_order({ order, user, cartItemsProducts }:
             });
 
             // Add shipping cost
-            if (idPostnina) {
+            if (includeShipping) {
                 const shippingProduct = await Product.findById(idPostnina);
                 if (shippingProduct) {
                     const priceWithVat = parseFloat(String(shippingProduct.price));

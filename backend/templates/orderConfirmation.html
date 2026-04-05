@@ -33,12 +33,8 @@
                 <h2>Naročilo #{{orderId}}</h2>
                 <p><strong>Datum naročila:</strong> {{orderDate}}</p>
                 
-                <h3>Naslov za dostavo:</h3>
-                <p>
-                    {{firstName}} {{lastName}}<br>
-                    {{address}}<br>
-                    {{postalCode}} {{city}}<br>
-                </p>
+                <h3>{{deliveryDetailsTitle}}:</h3>
+                <p>{{deliveryDetailsHtml}}</p>
                 
                 <h3>Naročeni izdelki:</h3>
                 <table>

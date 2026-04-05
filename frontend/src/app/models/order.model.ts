@@ -1,9 +1,11 @@
+export type OrderPaymentMethod = 'DELIVERY' | 'UPN' | 'PICKUP';
+
 export interface Order {
   id: number;
   userId: number;
   totalAmount: number;
   status: string;
-  paymentMethod: string;
+  paymentMethod: OrderPaymentMethod;
   shippingFirstName: string;
   shippingLastName: string;
   shippingEmail: string;
