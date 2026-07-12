@@ -28,7 +28,6 @@ async function initializeDatabase() {
         logger_1.default.info('Successfully connected to MySQL database.');
         connection.release();
         await createTables();
-        await runMigrations();
         logger_1.default.info('DB init OK (MySQL)');
     }
     catch (error) {
@@ -90,7 +89,7 @@ async function createTables() {
         shipping_postal_code VARCHAR(20) NOT NULL,
         shipping_city VARCHAR(100) NOT NULL,
         shipping_phone_number VARCHAR(20) NOT NULL,
-        payment_method ENUM('DELIVERY', 'UPN') NOT NULL DEFAULT 'DELIVERY',
+        payment_method ENUM('DELIVERY', 'UPN', 'PICKUP') NOT NULL DEFAULT 'DELIVERY',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
         INDEX idx_orders_user_id (user_id),
@@ -116,37 +115,6 @@ async function createTables() {
     }
     finally {
         connection.release();
-    }
-}
-async function runMigrations() {
-    if (!pool)
-        throw new Error('DB not initialized');
-    const connection = await pool.getConnection();
-    try {
-        await ensureProductsDisplayOrderSchema(connection);
-    }
-    finally {
-        connection.release();
-    }
-}
-async function ensureProductsDisplayOrderSchema(connection) {
-    const [displayOrderColumns] = await connection.query("SHOW COLUMNS FROM products LIKE 'display_order'");
-    if (displayOrderColumns.length === 0) {
-        await connection.query(`
-      ALTER TABLE products
-      ADD COLUMN display_order INT NOT NULL DEFAULT 0 AFTER minimax_id
-    `);
-        logger_1.default.info('Added products.display_order column');
-    }
-    await connection.query(`
-    UPDATE products
-    SET display_order = id
-    WHERE display_order = 0
-  `);
-    const [displayOrderIndexes] = await connection.query("SHOW INDEX FROM products WHERE Key_name = 'idx_display_order'");
-    if (displayOrderIndexes.length === 0) {
-        await connection.query('CREATE INDEX idx_display_order ON products(display_order)');
-        logger_1.default.info('Created idx_display_order index');
     }
 }
 function getPool() {

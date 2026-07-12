@@ -72,10 +72,9 @@ async function getToken({ username, password }) {
         'Accept': 'application/json',
         'Content-Length': Buffer.byteLength(form.toString()),
     };
-    logger_1.default.info('Token request headers:', headers);
     try {
         const res = await httpsRequest('POST', url, headers, form.toString());
-        logger_1.default.info(`Token response status: ${res.status, url}`);
+        logger_1.default.info('Minimax token response received', { status: res.status });
         if (res.status < 200 || res.status >= 300) {
             logger_1.default.error(`Token request failed with status ${res.status}:`, res.data);
             const error = new Error(`Failed to obtain token. Status: ${res.status}`);
@@ -86,7 +85,6 @@ async function getToken({ username, password }) {
     }
     catch (error) {
         logger_1.default.error('Token request error:', error.message);
-        logger_1.default.info('It crashed with', (url, headers));
         if (error.response) {
             logger_1.default.error('Error response:', error.response);
         }

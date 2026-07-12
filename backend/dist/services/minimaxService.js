@@ -101,7 +101,6 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
             if (!result) {
                 throw new Error(`Failed to create Minimax item for product ${item.id} after trying ${codesToTry.join(', ')}`);
             }
-            logger_1.default.info('Minimax item creation result', { productId: item.id, code: usedCode, minimaxResult: result, headers });
             minimaxItemId =
                 result?.ItemId ||
                     result?.Item?.ID ||
@@ -110,11 +109,12 @@ async function buildInvoiceRowsFromCart({ cartItemsProducts, vatPercent, token }
             if (!minimaxItemId) {
                 throw new Error(`Failed to extract Minimax item ID for product ${item.id}`);
             }
+            logger_1.default.info('Minimax item created', { productId: item.id, code: usedCode, minimaxItemId });
             try {
                 await Product_1.default.updateMinimaxId(item.id, minimaxItemId);
             }
             catch (updateError) {
-                logger_1.default.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId, updateError });
+                logger_1.default.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId });
             }
         }
         if (minimaxItemId) {
@@ -179,7 +179,7 @@ async function createNewCustomer({ customerId, bearerToken = null }) {
         SubjectToVAT: "N",
         TaxNumber: ""
     };
-    logger_1.default.info("Trying to create a customer with body", body);
+    logger_1.default.info('Creating Minimax customer', { customerId });
     let token = bearerToken;
     if (!token) {
         const u = process.env.MINIMAX_USERNAME;
@@ -190,7 +190,6 @@ async function createNewCustomer({ customerId, bearerToken = null }) {
         token = t.access_token;
         logger_1.default.info("Created new token for customer creation");
     }
-    logger_1.default.info("Sending request to minimax to create customer with body", body);
     try {
         const [result, _] = await (0, httpRequestsService_1.apiRequestToMinimax)({
             method: 'POST',
@@ -199,7 +198,7 @@ async function createNewCustomer({ customerId, bearerToken = null }) {
             body,
         });
         logger_1.default.info("Successfully created customer in minimax");
-        logger_1.default.info("returning user id and customer info", user.id, result);
+        logger_1.default.info('Minimax customer created', { customerId: user.id });
         return { customerId: user.id, customer: result };
     }
     catch (error) {
@@ -253,7 +252,7 @@ async function getCustomerId(user) {
         return newCustomer.CustomerId;
     }
     catch (createError) {
-        logger_1.default.error('Failed to create new customer:', createError);
+        logger_1.default.error('Failed to create new customer', { customerId: user.id });
         throw createError;
     }
 }

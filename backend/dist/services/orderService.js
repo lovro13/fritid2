@@ -11,6 +11,8 @@ const logger_1 = __importDefault(require("../logger"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const idPostnina = 324;
+const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
 async function create_order({ order, user, cartItemsProducts }) {
     // Creates order and sends issues to minimax and generates invoice PDF if needed 
     // and makes stickers from GLS and sends 2 mails,
@@ -18,6 +20,9 @@ async function create_order({ order, user, cartItemsProducts }) {
     // operation, but just log the error and continue with the rest of the operations
     const orgId = process.env.MINIMAX_ORG_ID;
     const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT || '0');
+    const subtotalCents = cartItemsProducts.reduce((sum, item) => sum + (Math.round(Number(item.price) * 100) * Number(item.quantity)), 0);
+    const includeShipping = order.paymentMethod !== 'PICKUP'
+        && subtotalCents < FREE_SHIPPING_THRESHOLD_CENTS;
     let invoiceId = null;
     try {
         // CREATING MINIMAX INVOICE
@@ -49,10 +54,10 @@ async function create_order({ order, user, cartItemsProducts }) {
                 token
             });
             // Add shipping cost
-            if (idPostnina) {
+            if (includeShipping) {
                 const shippingProduct = await Product_1.default.findById(idPostnina);
                 if (shippingProduct) {
-                    const priceWithVat = parseFloat(String(shippingProduct.price));
+                    const priceWithVat = SHIPPING_FEE;
                     const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
                     const totalValueWithVat = priceWithVat * 1; // Quantity 1
                     invoiceRows.push({
@@ -115,8 +120,7 @@ async function create_order({ order, user, cartItemsProducts }) {
                 token,
                 body: invoicePayload
             });
-            logger_1.default.info(`Invoice created successfully: data: ${JSON.stringify(invoiceResponse)}, 
-            headers: ${JSON.stringify(headers)}`);
+            logger_1.default.info('Minimax invoice created', { orderId: order.id });
             // GET THE INVOICE ID
             const locationHeader = headers?.location || '';
             const invoicePathMatch = locationHeader.match(/\/SI\/API\/api\/(orgs\/\d+\/issuedinvoices\/\d+)/);
@@ -133,7 +137,6 @@ async function create_order({ order, user, cartItemsProducts }) {
             });
             try {
                 const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
-                logger_1.default.info("got row version for pdf generation:", rowVersion);
                 // GET THE PDF FOR UPN PAYMENT METHOD
                 const [pdfResponse, pdfHeaders] = await (0, minimaxService_1.apiRequestToMinimax)({
                     method: 'PUT',
@@ -141,8 +144,7 @@ async function create_order({ order, user, cartItemsProducts }) {
                     token,
                     body: {}
                 });
-                logger_1.default.info(`PDF generated successfully for invoice;`);
-                logger_1.default.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
+                logger_1.default.info('Invoice PDF generated', { orderId: order.id, invoiceId });
                 // SAVE PDF
                 let savedFilePath = null;
                 const fileName = `invoice_${order.id}_${invoiceId}.pdf`;
@@ -157,10 +159,10 @@ async function create_order({ order, user, cartItemsProducts }) {
                 savedFilePath = path_1.default.join(uploadsDir, fileName);
                 const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
                 fs_1.default.writeFileSync(savedFilePath, pdfBuffer);
-                logger_1.default.info(`PDF saved to: ${savedFilePath}`);
+                logger_1.default.info('Invoice PDF saved', { orderId: order.id, invoiceId });
             }
             catch (pdfError) {
-                logger_1.default.error('Failed to generate PDF:', pdfError);
+                logger_1.default.error('Failed to generate PDF', { orderId: order.id, invoiceId });
                 // Return invoice without PDF - don't fail the whole operation
             }
             return {
@@ -172,7 +174,7 @@ async function create_order({ order, user, cartItemsProducts }) {
             };
         }
         catch (invErr) {
-            logger_1.default.error('Failed to create Minimax invoice:', invErr);
+            logger_1.default.error('Failed to create Minimax invoice', { orderId: order.id, message: invErr?.message });
             await order.updateStatus('Invoice Error');
             return {
                 success: false,

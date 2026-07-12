@@ -9,10 +9,29 @@ const logger_1 = __importDefault(require("../logger"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const PICKUP_LOCATION = 'Spodnje Stranje 33';
 // Resolve backend directory - handles both dev (running from src) and production (running from dist)
 const isRunningFromDist = __dirname.includes(path_1.default.sep + 'dist' + path_1.default.sep) || __dirname.includes('/dist/');
 const backendDir = isRunningFromDist ? path_1.default.resolve(__dirname, '..', '..') : path_1.default.resolve(__dirname, '..');
 const templatesDir = path_1.default.resolve(backendDir, 'templates');
+const legacyTemplatesDir = path_1.default.resolve(backendDir, 'dist', 'templates');
+function getShippingAmount(order) {
+    if (!order?.orderItems?.length) {
+        return order?.paymentMethod === 'PICKUP' ? 0 : SHIPPING_FEE;
+    }
+    const subtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shippingAmount = Number(order.totalAmount) - subtotal;
+    return shippingAmount > 0 ? shippingAmount : 0;
+}
+function getPaymentMethodLabel(paymentMethod) {
+    if (paymentMethod === 'UPN') {
+        return 'UPN nalog (bančno nakazilo)';
+    }
+    if (paymentMethod === 'PICKUP') {
+        return 'Osebni prevzem';
+    }
+    return 'Plačilo ob dostavi';
+}
 /**
  * Escape HTML entities to prevent XSS attacks
  * @param {string} text - Text to escape
@@ -52,15 +71,16 @@ class MailService {
     /**
      * Send order confirmation email
      * @param {Object} order - Order object from Order.js
-     * @param {boolean} upn - Whether payment is via UPN (true) or cash/card on delivery (false)
-     * @param {string|null} invoiceId - Invoice ID for UPN payments (required if upn=true)
+     * @param {string|null} invoiceId - Invoice ID for UPN payments
      * @returns {Promise<Object>} - Email send result
      */
-    async sendOrderConfirmation(order, upn = false, invoiceId = null) {
+    async sendOrderConfirmation(order, invoiceId = null) {
         try {
-            logger_1.default.info(`Preparing to send order confirmation email for order #${order.id}, UPN: ${upn}`);
+            const isUpn = order.paymentMethod === 'UPN';
+            const isPickup = order.paymentMethod === 'PICKUP';
+            logger_1.default.info(`Preparing to send order confirmation email for order #${order.id}, payment method: ${order.paymentMethod}`);
             // Validate UPN payment requires invoice ID
-            if (upn && !invoiceId) {
+            if (isUpn && !invoiceId) {
                 logger_1.default.error('Invoice ID is required for UPN payments but not provided');
                 throw new Error('Invoice ID is required for UPN payments');
             }
@@ -70,7 +90,7 @@ class MailService {
             }
             // Check if invoice exists for UPN payment
             let invoicePath = null;
-            if (upn) {
+            if (isUpn) {
                 const invoicesDir = path_1.default.resolve(backendDir, 'uploads', 'invoices');
                 invoicePath = path_1.default.resolve(invoicesDir, `invoice_${order.id}_${invoiceId}.pdf`);
                 if (!fs_1.default.existsSync(invoicePath)) {
@@ -80,6 +100,8 @@ class MailService {
             }
             // Generate order items HTML with escaped user data
             const subtotal = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const shippingAmount = getShippingAmount(order);
+            const shippingLabel = isPickup ? 'Osebni prevzem' : 'Dostava';
             const orderItemsHtml = order.orderItems.map(item => `
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">
@@ -95,13 +117,23 @@ class MailService {
                         ${(item.price * item.quantity).toFixed(2)} EUR
                     </td>
                 </tr>
-            `).join('') + `<tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Vmesni seštevek:</strong></td><td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} EUR</strong></td></tr><tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Dostava:</strong></td><td style="padding: 10px; text-align: right;"><strong>${SHIPPING_FEE.toFixed(2)} EUR</strong></td></tr>`;
+            `).join('') + `<tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>Vmesni seštevek:</strong></td><td style="padding: 10px; text-align: right;"><strong>${subtotal.toFixed(2)} EUR</strong></td></tr><tr><td colspan="3" style="padding: 10px; text-align: right;"><strong>${shippingLabel}:</strong></td><td style="padding: 10px; text-align: right;"><strong>${shippingAmount.toFixed(2)} EUR</strong></td></tr>`;
             // Prepare template variables
-            const title = upn ? '📄 Račun za naročilo' : 'Potrditev naročila';
-            const introText = upn ? 'V prilogi najdete račun z UPN nalogom za plačilo.' : 'Prejeli smo vaše naročilo in ga trenutno obdelujemo.';
+            const title = isUpn ? '📄 Račun za naročilo' : 'Potrditev naročila';
+            const introText = isUpn
+                ? 'V prilogi najdete račun z UPN nalogom za plačilo.'
+                : isPickup
+                    ? 'Prejeli smo vaše naročilo za osebni prevzem.'
+                    : 'Prejeli smo vaše naročilo in ga trenutno obdelujemo.';
             let paymentInfoHtml = '';
             let additionalInstructionsHtml = '';
-            if (upn) {
+            let deliveryDetailsTitle = 'Naslov za dostavo';
+            let deliveryDetailsHtml = `
+                    ${escapeHtml(order.shippingFirstName)} ${escapeHtml(order.shippingLastName)}<br>
+                    ${escapeHtml(order.shippingAddress)}<br>
+                    ${escapeHtml(order.shippingPostalCode)} ${escapeHtml(order.shippingCity)}<br>
+                `;
+            if (isUpn) {
                 paymentInfoHtml = `
                 <div class="payment-info upn" style="background-color: #e3f2fd; padding: 15px; border-left: 4px solid #2196F3; margin: 15px 0; border-radius: 5px;">
                     <strong>💳 Način plačila:</strong> UPN nalog (bančno nakazilo)
@@ -126,6 +158,23 @@ class MailService {
                     <li>Po prejemu plačila bomo naročilo takoj odposlali</li>
                 </ol>`;
             }
+            else if (isPickup) {
+                deliveryDetailsTitle = 'Lokacija prevzema';
+                deliveryDetailsHtml = `
+                    Fritid<br>
+                    ${escapeHtml(PICKUP_LOCATION)}<br>
+                `;
+                paymentInfoHtml = `
+                <div class="payment-info" style="background-color: #fff8e1; padding: 15px; border-left: 4px solid #ff9800; margin: 15px 0; border-radius: 5px;">
+                    <strong>🛍️ Način prevzema:</strong> Osebni prevzem
+                    <p style="margin: 10px 0 0 0;">
+                        Prevzem je možen na naslovu <strong>${escapeHtml(PICKUP_LOCATION)}</strong>.<br>
+                        Dostava se pri tej izbiri ne obračuna.
+                    </p>
+                </div>`;
+                additionalInstructionsHtml = `
+                <p>Ko bo naročilo pripravljeno, vas lahko kontaktiramo za prevzem na naslovu <strong>${escapeHtml(PICKUP_LOCATION)}</strong>.</p>`;
+            }
             else {
                 paymentInfoHtml = `
                 <div class="payment-info" style="background-color: #e8f5e9; padding: 15px; border-left: 4px solid #4CAF50; margin: 15px 0; border-radius: 5px;">
@@ -144,23 +193,22 @@ class MailService {
                 .replace('{{paymentInfoHtml}}', paymentInfoHtml) // Already contains escaped order.id
                 .replace(/{{orderId}}/g, escapeHtml(String(order.id)))
                 .replace('{{orderDate}}', escapeHtml(new Date(order.createdAt).toLocaleDateString('sl-SI', { year: 'numeric', month: 'long', day: 'numeric' })))
-                .replace('{{address}}', escapeHtml(order.shippingAddress))
-                .replace('{{postalCode}}', escapeHtml(order.shippingPostalCode))
-                .replace('{{city}}', escapeHtml(order.shippingCity))
+                .replace('{{deliveryDetailsTitle}}', escapeHtml(deliveryDetailsTitle))
+                .replace('{{deliveryDetailsHtml}}', deliveryDetailsHtml)
                 .replace('{{orderItemsHtml}}', orderItemsHtml) // Already escaped
-                .replace('{{totalLabel}}', escapeHtml(upn ? 'Za plačilo:' : 'Skupaj:'))
+                .replace('{{totalLabel}}', escapeHtml(isUpn ? 'Za plačilo:' : 'Skupaj:'))
                 .replace('{{totalAmount}}', order.totalAmount.toFixed(2))
                 .replace('{{additionalInstructionsHtml}}', additionalInstructionsHtml);
             // Plain text version (simplified for brevity, ideally also a template)
-            const textContent = `Naročilo - ${upn ? 'Za plačilo' : 'Potrditev'}`;
+            const textContent = `Naročilo - ${isUpn ? 'Za plačilo' : 'Potrditev'}`;
             const recipientEmail = order.shippingEmail;
             const mailOptions = {
                 from: `"Fritid" <${process.env.MAIL_USER}>`,
                 to: recipientEmail,
-                subject: upn ? `Račun za naročilo pri Fritid d.o.o.` : `Potrditev naročila`,
+                subject: isUpn ? `Račun za naročilo pri Fritid d.o.o.` : isPickup ? `Potrditev naročila za osebni prevzem` : `Potrditev naročila`,
                 text: textContent,
                 html: htmlContent,
-                attachments: upn ? [{
+                attachments: isUpn ? [{
                         filename: `racun_${order.id}_${invoiceId}.pdf`,
                         path: invoicePath
                     }] : []
@@ -201,10 +249,12 @@ class MailService {
             }
             // Generate order items text for owner
             const subtotalOwner = order.orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const shippingAmount = getShippingAmount(order);
+            const shippingLabel = order.paymentMethod === 'PICKUP' ? 'Osebni prevzem' : 'Dostava';
             const orderItemsText = order.orderItems.map(item => {
                 const colorLine = item.color ? `\n  Barva: ${item.color}` : '';
                 return `${item.productName}${colorLine}\n  Količina: ${item.quantity}\n  Cena: ${item.price.toFixed(2)} EUR\n  Skupaj: ${(item.price * item.quantity).toFixed(2)} EUR`;
-            }).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\nDostava: ${SHIPPING_FEE.toFixed(2)} EUR`;
+            }).join('\n\n') + `\n\nVmesni seštevek: ${subtotalOwner.toFixed(2)} EUR\n${shippingLabel}: ${shippingAmount.toFixed(2)} EUR\nNačin naročila: ${getPaymentMethodLabel(order.paymentMethod)}${order.paymentMethod === 'PICKUP' ? `\nLokacija prevzema: ${PICKUP_LOCATION}` : ''}`;
             // Replace variables in template with escaped user data
             let htmlContent = this.templates.ownerNotification
                 .replace(/{{orderId}}/g, escapeHtml(String(order.id)))

@@ -24,8 +24,9 @@
         <span>{{ shippingLabel }}:</span>
         <span>{{ shippingCost === 0 ? 'Brezplačno' : (shippingCost | currency:'EUR') }}</span>
       </div>
-      @if (subtotal >= 50) {
+      @if (selectedMethod !== 'pickup') {
         <div class="free-shipping-note">
+          <small>Brezplačna dostava pri nakupu od 150,00 € naprej.</small>
         </div>
       }
       <div class="total-line total-amount">

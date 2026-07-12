@@ -110,7 +110,6 @@ export async function buildInvoiceRowsFromCart({
         throw new Error(`Failed to create Minimax item for product ${item.id} after trying ${codesToTry.join(', ')}`);
       }
 
-      logger.info('Minimax item creation result', { productId: item.id, code: usedCode, minimaxResult: result, headers });
       minimaxItemId =
         result?.ItemId ||
         result?.Item?.ID ||
@@ -120,11 +119,12 @@ export async function buildInvoiceRowsFromCart({
       if (!minimaxItemId) {
         throw new Error(`Failed to extract Minimax item ID for product ${item.id}`);
       }
+      logger.info('Minimax item created', { productId: item.id, code: usedCode, minimaxItemId });
 
       try {
         await Product.updateMinimaxId(item.id, minimaxItemId);
       } catch (updateError) {
-        logger.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId, updateError });
+        logger.warn('Failed to persist minimax_id on product', { productId: item.id, minimaxItemId });
       }
     }
 
@@ -198,7 +198,7 @@ export async function createNewCustomer({ customerId, bearerToken = null }: { cu
     SubjectToVAT: "N",
     TaxNumber: ""
   };
-  logger.info("Trying to create a customer with body", body)
+  logger.info('Creating Minimax customer', { customerId });
   let token = bearerToken;
   if (!token) {
     const u = process.env.MINIMAX_USERNAME;
@@ -209,8 +209,6 @@ export async function createNewCustomer({ customerId, bearerToken = null }: { cu
     logger.info("Created new token for customer creation");
   }
 
-  logger.info("Sending request to minimax to create customer with body", body);
-
   try {
     const [result, _] = await apiRequestToMinimax({
       method: 'POST',
@@ -219,7 +217,7 @@ export async function createNewCustomer({ customerId, bearerToken = null }: { cu
       body,
     });
     logger.info("Successfully created customer in minimax");
-    logger.info("returning user id and customer info", user.id, result);
+    logger.info('Minimax customer created', { customerId: user.id });
     return { customerId: user.id, customer: result };
   } catch (error) {
     throw error;
@@ -277,7 +275,7 @@ export async function getCustomerId(user: any) {
     return newCustomer.CustomerId;
 
   } catch (createError) {
-    logger.error('Failed to create new customer:', createError);
+    logger.error('Failed to create new customer', { customerId: user.id });
     throw createError;
   }
 }

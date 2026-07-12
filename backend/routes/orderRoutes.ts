@@ -14,6 +14,7 @@ import logger from '../logger';
 
 const router = express.Router();
 const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const FREE_SHIPPING_THRESHOLD_CENTS = 15_000;
 
 // Get all orders
 router.get('/', adminAuth, async (_req: Request, res: Response) => {
@@ -150,7 +151,7 @@ router.post(
       logger.info('Mapped payment type', { typeOfOrder, paymentMethod });
 
       const cartItemsProducts: any[] = [];
-      let subtotal = 0;
+      let subtotalCents = 0;
       logger.info('Verifying cart items against database products');
       for (const item of cartItems) {
         const productId = Number(item?.product?.id);
@@ -159,7 +160,7 @@ router.post(
           throw new Error(`Product with ID ${productId} not found in database`);
         }
 
-        subtotal += product.price * item.quantity;
+        subtotalCents += Math.round(Number(product.price) * 100) * item.quantity;
         cartItemsProducts.push({
           ...product,
           quantity: item.quantity,
@@ -168,8 +169,10 @@ router.post(
         // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
       }
 
-      const shippingFee = paymentMethod === 'PICKUP' ? 0 : SHIPPING_FEE;
-      const totalAmount = subtotal + shippingFee;
+      const shippingFee = paymentMethod === 'PICKUP' || subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+        ? 0
+        : SHIPPING_FEE;
+      const totalAmount = (subtotalCents + Math.round(shippingFee * 100)) / 100;
 
       logger.info('Creating order for user ID:', userId);
       const order = await Order.create({

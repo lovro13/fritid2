@@ -7,6 +7,7 @@ import { combineLatest, take } from 'rxjs';
 
 // Constants for order calculation
 export const SHIPPING_COST = 5.99; // Shipping cost constant
+const FREE_SHIPPING_THRESHOLD_CENTS = 15_000;
 type OrderMethod = 'upn' | 'cash' | 'pickup';
 
 @Component({
@@ -25,6 +26,7 @@ export class PaymentMethodComponent implements OnInit {
 
   // Order summary properties
   subtotal: number = 0;
+  private subtotalCents: number = 0;
   shippingCost: number = SHIPPING_COST;
   totalAmount: number = 0;
   cartItems: any[] = [];
@@ -50,16 +52,17 @@ export class PaymentMethodComponent implements OnInit {
       this.cartItems = cartItems;
       
       // Calculate subtotal (price WITH VAT included)
-      this.subtotal = cartItems.reduce((sum, item) => {
-        return sum + (parseFloat(item.product.price.toString()) * item.quantity);
+      this.subtotalCents = cartItems.reduce((sum, item) => {
+        return sum + (Math.round(Number(item.product.price) * 100) * item.quantity);
       }, 0);
+      this.subtotal = this.subtotalCents / 100;
       this.updateTotals();
     });
   }
 
   // Template helper methods
   calculateItemPrice(price: number, quantity: number): number {
-    return parseFloat(price.toString()) * quantity;
+    return (Math.round(Number(price) * 100) * quantity) / 100;
   }
 
   get shippingLabel(): string {
@@ -72,12 +75,14 @@ export class PaymentMethodComponent implements OnInit {
   }
 
   private getShippingCost(): number {
-    return this.selectedMethod === 'pickup' ? 0 : SHIPPING_COST;
+    return this.selectedMethod === 'pickup' || this.subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+      ? 0
+      : SHIPPING_COST;
   }
 
   private updateTotals() {
     this.shippingCost = this.getShippingCost();
-    this.totalAmount = this.subtotal + this.shippingCost;
+    this.totalAmount = (this.subtotalCents + Math.round(this.shippingCost * 100)) / 100;
     this.total = this.totalAmount;
   }
 

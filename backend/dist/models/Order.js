@@ -37,7 +37,8 @@ class Order {
     static get PAYMENT_METHOD() {
         return {
             DELIVERY: 'DELIVERY',
-            UPN: 'UPN'
+            UPN: 'UPN',
+            PICKUP: 'PICKUP'
         };
     }
     static async findAll() {

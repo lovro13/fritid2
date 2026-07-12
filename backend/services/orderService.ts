@@ -11,6 +11,8 @@ import fs from 'fs';
 import path from 'path';
 
 const idPostnina = 324;
+const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const FREE_SHIPPING_THRESHOLD_CENTS = 15_000;
 
 export async function create_order({ order, user, cartItemsProducts }: 
     { order: any; user: any; cartItemsProducts: any[]; }) {
@@ -20,7 +22,12 @@ export async function create_order({ order, user, cartItemsProducts }:
     // operation, but just log the error and continue with the rest of the operations
     const orgId = process.env.MINIMAX_ORG_ID;
     const vatPercent = parseFloat(process.env.MINIMAX_VAT_PERCENT || '0');
-    const includeShipping = order.paymentMethod !== 'PICKUP';
+    const subtotalCents = cartItemsProducts.reduce(
+        (sum, item) => sum + (Math.round(Number(item.price) * 100) * Number(item.quantity)),
+        0
+    );
+    const includeShipping = order.paymentMethod !== 'PICKUP'
+        && subtotalCents < FREE_SHIPPING_THRESHOLD_CENTS;
     let invoiceId = null;
 
     try {
@@ -60,7 +67,7 @@ export async function create_order({ order, user, cartItemsProducts }:
             if (includeShipping) {
                 const shippingProduct = await Product.findById(idPostnina);
                 if (shippingProduct) {
-                    const priceWithVat = parseFloat(String(shippingProduct.price));
+                    const priceWithVat = SHIPPING_FEE;
                     const priceWithoutVat = priceWithVat / (1 + vatPercent / 100);
                     const totalValueWithVat = priceWithVat * 1; // Quantity 1
 
@@ -128,8 +135,7 @@ export async function create_order({ order, user, cartItemsProducts }:
                 token,
                 body: invoicePayload
             });
-            logger.info(`Invoice created successfully: data: ${JSON.stringify(invoiceResponse)}, 
-            headers: ${JSON.stringify(headers)}`);
+            logger.info('Minimax invoice created', { orderId: order.id });
 
 
             // GET THE INVOICE ID
@@ -149,7 +155,6 @@ export async function create_order({ order, user, cartItemsProducts }:
             });
             try {
                 const rowVersion = encodeURIComponent(checkInvoiceResponse.RowVersion);
-                logger.info("got row version for pdf generation:", rowVersion);
                 // GET THE PDF FOR UPN PAYMENT METHOD
                 const [pdfResponse, pdfHeaders] = await apiRequestToMinimax({
                     method: 'PUT',
@@ -157,8 +162,7 @@ export async function create_order({ order, user, cartItemsProducts }:
                     token,
                     body: {}
                 });
-                logger.info(`PDF generated successfully for invoice;`);
-                logger.info('Invoice PDF generated:', pdfResponse.Data?.AttachmentFileName);
+                logger.info('Invoice PDF generated', { orderId: order.id, invoiceId });
 
                 // SAVE PDF
                 let savedFilePath = null;
@@ -174,9 +178,9 @@ export async function create_order({ order, user, cartItemsProducts }:
                 savedFilePath = path.join(uploadsDir, fileName);
                 const pdfBuffer = Buffer.from(pdfResponse.Data.AttachmentData, 'base64');
                 fs.writeFileSync(savedFilePath, pdfBuffer);
-                logger.info(`PDF saved to: ${savedFilePath}`);
+                logger.info('Invoice PDF saved', { orderId: order.id, invoiceId });
             } catch (pdfError) {
-                logger.error('Failed to generate PDF:', pdfError);
+                logger.error('Failed to generate PDF', { orderId: order.id, invoiceId });
                 // Return invoice without PDF - don't fail the whole operation
             }
 
@@ -188,7 +192,7 @@ export async function create_order({ order, user, cartItemsProducts }:
                 invoiceId: invoiceId
             };
         } catch (invErr: any) {
-            logger.error('Failed to create Minimax invoice:', invErr);
+            logger.error('Failed to create Minimax invoice', { orderId: order.id, message: invErr?.message });
             await order.updateStatus('Invoice Error');
             return {
                 success: false,

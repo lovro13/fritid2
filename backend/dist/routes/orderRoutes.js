@@ -18,6 +18,7 @@ const jwtService_1 = __importDefault(require("../services/jwtService"));
 const logger_1 = __importDefault(require("../logger"));
 const router = express_1.default.Router();
 const SHIPPING_FEE = Number(process.env.SHIPPING_FEE || 5.99);
+const FREE_SHIPPING_THRESHOLD_CENTS = 15000;
 // Get all orders
 router.get('/', adminAuth_1.default, async (_req, res) => {
     try {
@@ -79,7 +80,7 @@ router.post('/', [
     (0, express_validator_1.body)('cartItems').isArray({ min: 1 }).withMessage('Cart must contain at least one item'),
     (0, express_validator_1.body)('cartItems.*.product.id').isInt({ min: 1 }).withMessage('Valid product ID is required'),
     (0, express_validator_1.body)('cartItems.*.quantity').isInt({ min: 1 }).withMessage('Quantity must be at least 1'),
-    (0, express_validator_1.body)('typeOfOrder').isIn(['upn', 'cash', 'delivery']).withMessage('Invalid order type')
+    (0, express_validator_1.body)('typeOfOrder').isIn(['upn', 'cash', 'delivery', 'pickup']).withMessage('Invalid order type')
 ], async (req, res) => {
     const errors = (0, express_validator_1.validationResult)(req);
     if (!errors.isEmpty()) {
@@ -133,12 +134,15 @@ router.post('/', [
         if (typeOfOrder === 'upn' || typeOfOrder === 'UPN') {
             paymentMethod = 'UPN';
         }
+        else if (typeOfOrder === 'pickup') {
+            paymentMethod = 'PICKUP';
+        }
         else if (typeOfOrder === 'cash' || typeOfOrder === 'delivery') {
             paymentMethod = 'DELIVERY';
         }
         logger_1.default.info('Mapped payment type', { typeOfOrder, paymentMethod });
         const cartItemsProducts = [];
-        let subtotal = 0;
+        let subtotalCents = 0;
         logger_1.default.info('Verifying cart items against database products');
         for (const item of cartItems) {
             const productId = Number(item?.product?.id);
@@ -146,7 +150,7 @@ router.post('/', [
             if (!product) {
                 throw new Error(`Product with ID ${productId} not found in database`);
             }
-            subtotal += product.price * item.quantity;
+            subtotalCents += Math.round(Number(product.price) * 100) * item.quantity;
             cartItemsProducts.push({
                 ...product,
                 quantity: item.quantity,
@@ -154,7 +158,10 @@ router.post('/', [
             });
             // HERE WE SHOULD GIVE THE ITEM MINIMAX_ID if it doesnt have it yet
         }
-        const totalAmount = subtotal + SHIPPING_FEE;
+        const shippingFee = paymentMethod === 'PICKUP' || subtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS
+            ? 0
+            : SHIPPING_FEE;
+        const totalAmount = (subtotalCents + Math.round(shippingFee * 100)) / 100;
         logger_1.default.info('Creating order for user ID:', userId);
         const order = await Order_1.default.create({
             optUserId: userId ?? undefined,
@@ -198,31 +205,31 @@ router.post('/', [
             });
         }
         let glsLabelPath = null;
-        try {
-            logger_1.default.info('Generating GLS shipping label for order', { orderId: order.id });
-            const glsResult = await glsService_1.default.generateLabelForOrder(order);
-            if (glsResult.success) {
-                glsLabelPath = glsResult.labelPath;
-                logger_1.default.info('GLS label saved', { path: glsLabelPath, parcelNumber: glsResult.parcelNumber });
+        if (order.paymentMethod !== 'PICKUP') {
+            try {
+                logger_1.default.info('Generating GLS shipping label for order', { orderId: order.id });
+                const glsResult = await glsService_1.default.generateLabelForOrder(order);
+                if (glsResult.success) {
+                    glsLabelPath = glsResult.labelPath;
+                    logger_1.default.info('GLS label saved', { path: glsLabelPath, parcelNumber: glsResult.parcelNumber });
+                }
+                else {
+                    logger_1.default.error('Failed to generate GLS label', { errors: glsResult.errors });
+                }
             }
-            else {
-                logger_1.default.error('Failed to generate GLS label', { errors: glsResult.errors });
+            catch (glsError) {
+                logger_1.default.error('GLS label generation error:', glsError);
             }
         }
-        catch (glsError) {
-            logger_1.default.error('GLS label generation error:', glsError);
+        else {
+            logger_1.default.info('Skipping GLS label generation for personal pickup order', { orderId: order.id });
         }
         logger_1.default.info('Created minimax invoice for order', { orderId: order.id });
         logger_1.default.info('order.paymentMethod', { orderId: order.id, paymentMethod: order.paymentMethod });
         try {
             await mailService_1.default.sendOwnerOrderNotification(order, glsLabelPath);
             logger_1.default.info('Payment method on order and received', { orderPayment: order.paymentMethod, requestPayment: personInfo.paymentMethod });
-            if (order.paymentMethod === 'UPN') {
-                await mailService_1.default.sendOrderConfirmation(order, true, minimax_invoice_result.invoiceId || null);
-            }
-            else {
-                await mailService_1.default.sendOrderConfirmation(order, false, null);
-            }
+            await mailService_1.default.sendOrderConfirmation(order, order.paymentMethod === 'UPN' ? minimax_invoice_result.invoiceId || null : null);
         }
         catch (mailError) {
             logger_1.default.error('Graceful error - Failed to send notification emails:', mailError.message);

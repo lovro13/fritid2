@@ -71,11 +71,9 @@ export async function getToken({ username, password }: { username: string; passw
     'Accept': 'application/json',
     'Content-Length': Buffer.byteLength(form.toString()),
   };
-  logger.info('Token request headers:', headers);
-
   try {
     const res = await httpsRequest('POST', url, headers, form.toString());
-    logger.info(`Token response status: ${res.status, url}`);
+    logger.info('Minimax token response received', { status: res.status });
 
     if (res.status < 200 || res.status >= 300) {
       logger.error(`Token request failed with status ${res.status}:`, res.data);
@@ -86,7 +84,6 @@ export async function getToken({ username, password }: { username: string; passw
     return res.data;
   } catch (error) {
     logger.error('Token request error:', error.message);
-    logger.info('It crashed with', (url, headers))
     if (error.response) {
       logger.error('Error response:', error.response);
     }
